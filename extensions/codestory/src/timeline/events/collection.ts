@@ -16,6 +16,7 @@ import { writeFileContents } from '../../llm/recipe/helpers';
 import logger from '../../logger';
 import { WebviewView } from 'vscode';
 import { AgentViewProvider } from '../../views/AgentView';
+import { CSChatProgressContent, CSChatProvider, CSChatRequest } from '../../chatprovider';
 
 interface TestExecutionHarness {
 	testScript: string;
@@ -493,24 +494,27 @@ export class ToolingEventCollection {
 	events: ToolingEvent[];
 	saveDestination: string;
 	codeGraph: CodeGraph;
-	provider: AgentViewProvider;
+	provider?: AgentViewProvider;
+	csChatRequest?: CSChatRequest;
 	panelCommand: string;
 
 	constructor(
 		saveDestination: string,
 		codeGraph: CodeGraph,
-		provider: AgentViewProvider,
+		provider: AgentViewProvider | undefined,
+		csChatRequest: CSChatProvider | undefined,
 		panelCommand: string
 	) {
 		this.events = [];
 		this.codeGraph = codeGraph;
 		this.saveDestination = saveDestination;
 		this.provider = provider;
+		this.csChatRequest = this.csChatRequest;
 		this.panelCommand = panelCommand;
 	}
 
 	private async sendEventsToChatViewPanel() {
-		const value = await this.provider.getView()?.webview.postMessage({
+		const value = await this.provider?.getView()?.webview.postMessage({
 			payload: {
 				events: this.events,
 				saveDestination: this.saveDestination,
@@ -518,6 +522,17 @@ export class ToolingEventCollection {
 			command: this.panelCommand,
 		});
 		logger.info(`Sent events to chat view panel: ${value}`);
+	}
+
+	private async sendEventsToChatProvider() {
+		const payload = JSON.stringify({
+			events: this.events,
+			saveDestination: this.saveDestination,
+		});
+		logger.info(`Sending events to chat provider: ${payload}`);
+		this.csChatRequest?.addResponse(
+			new CSChatProgressContent(payload)
+		);
 	}
 
 	public async addThinkingEvent(userQuery: string, thinkingContext: string) {
@@ -625,6 +640,7 @@ export class ToolingEventCollection {
 	public async save() {
 		// We always want to send it to the view
 		this.sendEventsToChatViewPanel();
+		this.sendEventsToChatProvider();
 		await writeFileContents(
 			this.saveDestination,
 			JSON.stringify({

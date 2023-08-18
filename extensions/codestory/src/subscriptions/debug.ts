@@ -14,9 +14,11 @@ import logger from '../logger';
 import { PromptState } from '../types';
 import { AgentViewProvider } from '../views/AgentView';
 import { PythonServer } from '../utilities/pythonServerClient';
+import { CSChatProvider } from '../chatprovider';
 
 export const debug = (
 	provider: AgentViewProvider,
+	csChatProvider: CSChatProvider,
 	embeddingIndex: EmbeddingsSearch,
 	tsMorphProjectManagement: TSMorphProjectManagement,
 	pythonServer: PythonServer,
@@ -35,6 +37,7 @@ export const debug = (
 				`/tmp/${uuidv4()}`,
 				codeGraph,
 				provider,
+				csChatProvider,
 				message.command,
 			);
 			try {

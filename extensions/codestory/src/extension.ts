@@ -196,15 +196,23 @@ export async function activate(context: ExtensionContext) {
 		})
 	);
 
-
 	// Register chat provider
-	const interactiveSession = interactive.registerInteractiveSessionProvider('cs-chat', new CSChatProvider());
+	const csChatProvider = new CSChatProvider({
+		codeGraph,
+		embeddingsIndex,
+		projectManagement,
+		pythonServer,
+		workingDirectory: rootPath,
+		testSuiteRunCommand,
+	});
+	const interactiveSession = interactive.registerInteractiveSessionProvider('cs-chat', csChatProvider);
 	context.subscriptions.push(interactiveSession);
 
 	context.subscriptions.push(
 		debug(
 			// TODO(codestory): Fix this properly later on
 			agentViewProvider,
+			csChatProvider,
 			embeddingsIndex,
 			projectManagement,
 			pythonServer,
