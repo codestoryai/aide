@@ -20,7 +20,11 @@ declare module 'vscode' {
 
 	export interface CSChatVariableValue {
 		level: ChatVariableLevel;
-		value: string | CSChatDynamicVariableValue;
+		/**
+		 * An optional type tag for extensions to communicate the kind of the variable. An extension might use it to interpret the shape of `value`.
+		 */
+		kind?: string;
+		value: string | Uri | any | CSChatDynamicVariableValue;
 		description?: string;
 	}
 
