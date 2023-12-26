@@ -3,8 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { CancelablePromise, createCancelablePromise } from 'vs/base/common/async';
-import { CancellationToken } from 'vs/base/common/cancellation';
+import { CancellationToken, CancellationTokenSource } from 'vs/base/common/cancellation';
 import { Emitter, Event } from 'vs/base/common/event';
 import { MarkdownString } from 'vs/base/common/htmlContent';
 import { Iterable } from 'vs/base/common/iterator';
@@ -24,10 +23,10 @@ import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace
 import { ICSChatAgentService, ICSChatAgentCommand, IChatAgentData, ICSChatAgentRequest } from 'vs/workbench/contrib/csChat/common/csChatAgents';
 import { CONTEXT_PROVIDER_EXISTS } from 'vs/workbench/contrib/csChat/common/csChatContextKeys';
 import { ChatModel, ChatModelInitState, ChatRequestModel, ChatWelcomeMessageModel, IChatModel, ISerializableChatData, ISerializableChatsData } from 'vs/workbench/contrib/csChat/common/csChatModel';
-import { ChatRequestAgentPart, ChatRequestAgentSubcommandPart, ChatRequestSlashCommandPart } from 'vs/workbench/contrib/csChat/common/csChatParserTypes';
+import { ChatRequestAgentPart, ChatRequestAgentSubcommandPart, ChatRequestSlashCommandPart, IParsedChatRequest } from 'vs/workbench/contrib/csChat/common/csChatParserTypes';
 import { ChatMessageRole, ICSChatMessage } from 'vs/workbench/contrib/csChat/common/csChatProvider';
 import { ChatRequestParser } from 'vs/workbench/contrib/csChat/common/csChatRequestParser';
-import { ICSChatService, IChat, IChatCompleteResponse, IChatDetail, IChatDynamicRequest, ICSChatFollowup, ICSChatProgress, IChatProvider, IChatProviderInfo, IChatResponse, IChatTransferredSessionData, ICSChatUserActionEvent, InteractiveSessionCopyKind, CSChatSessionVoteDirection } from 'vs/workbench/contrib/csChat/common/csChatService';
+import { ICSChatService, IChat, IChatCompleteResponse, IChatDetail, IChatDynamicRequest, ICSChatFollowup, ICSChatProgress, IChatProvider, IChatProviderInfo, IChatResponse, IChatTransferredSessionData, ICSChatUserActionEvent, CSChatSessionVoteDirection, ChatAgentCopyKind } from 'vs/workbench/contrib/csChat/common/csChatService';
 import { ICSChatSlashCommandService } from 'vs/workbench/contrib/csChat/common/csChatSlashCommands';
 import { ICSChatVariablesService } from 'vs/workbench/contrib/csChat/common/csChatVariables';
 import { IExtensionService } from 'vs/workbench/services/extensions/common/extensions';
@@ -135,7 +134,7 @@ export class ChatService extends Disposable implements ICSChatService {
 	private readonly _providers = new Map<string, IChatProvider>();
 
 	private readonly _sessionModels = this._register(new DisposableMap<string, ChatModel>());
-	private readonly _pendingRequests = new Map<string, CancelablePromise<void>>();
+	private readonly _pendingRequests = this._register(new DisposableMap<string, CancellationTokenSource>());
 	private readonly _persistedSessions: ISerializableChatsData;
 	private readonly _hasProvider: IContextKey<boolean>;
 
@@ -225,7 +224,7 @@ export class ChatService extends Disposable implements ICSChatService {
 		} else if (action.action.kind === 'copy') {
 			this.telemetryService.publicLog2<ChatCopyEvent, ChatCopyClassification>('interactiveSessionCopy', {
 				providerId: action.providerId,
-				copyKind: action.action.copyType === InteractiveSessionCopyKind.Action ? 'action' : 'toolbar'
+				copyKind: action.action.copyKind === ChatAgentCopyKind.Action ? 'action' : 'toolbar'
 			});
 		} else if (action.action.kind === 'insert') {
 			this.telemetryService.publicLog2<ChatInsertEvent, ChatInsertClassification>('interactiveSessionInsert', {
@@ -461,7 +460,9 @@ export class ChatService extends Disposable implements ICSChatService {
 		let gotProgress = false;
 		const requestType = commandPart ? 'slashCommand' : 'string';
 
-		const rawResponsePromise = createCancelablePromise<void>(async token => {
+		const source = new CancellationTokenSource();
+		const token = source.token;
+		const sendRequestInternal = async () => {
 			const progressCallback = (progress: ICSChatProgress) => {
 				if (token.isCancellationRequested) {
 					return;
@@ -599,10 +600,11 @@ export class ChatService extends Disposable implements ICSChatService {
 			} finally {
 				listener.dispose();
 			}
-		});
-		this._pendingRequests.set(model.sessionId, rawResponsePromise);
+		};
+		const rawResponsePromise = sendRequestInternal();
+		this._pendingRequests.set(model.sessionId, source);
 		rawResponsePromise.finally(() => {
-			this._pendingRequests.delete(model.sessionId);
+			this._pendingRequests.deleteAndDispose(model.sessionId);
 		});
 		return rawResponsePromise;
 	}
@@ -631,7 +633,7 @@ export class ChatService extends Disposable implements ICSChatService {
 		return Array.from(this._providers.keys());
 	}
 
-	async addCompleteRequest(sessionId: string, message: string, response: IChatCompleteResponse): Promise<void> {
+	async addCompleteRequest(sessionId: string, message: IParsedChatRequest | string, response: IChatCompleteResponse): Promise<void> {
 		this.trace('addCompleteRequest', `message: ${message}`);
 
 		const model = this._sessionModels.get(sessionId);
@@ -640,7 +642,9 @@ export class ChatService extends Disposable implements ICSChatService {
 		}
 
 		await model.waitForInitialization();
-		const parsedRequest = await this.instantiationService.createInstance(ChatRequestParser).parseChatRequest(sessionId, message);
+		const parsedRequest = typeof message === 'string' ?
+			await this.instantiationService.createInstance(ChatRequestParser).parseChatRequest(sessionId, message) :
+			message;
 		const request = model.addRequest(parsedRequest);
 		if (typeof response.message === 'string') {
 			model.acceptResponseProgress(request, { content: response.message, kind: 'content' });
@@ -662,6 +666,7 @@ export class ChatService extends Disposable implements ICSChatService {
 	cancelCurrentRequestForSession(sessionId: string): void {
 		this.trace('cancelCurrentRequestForSession', `sessionId: ${sessionId}`);
 		this._pendingRequests.get(sessionId)?.cancel();
+		this._pendingRequests.deleteAndDispose(sessionId);
 	}
 
 	clearSession(sessionId: string): void {
@@ -675,6 +680,7 @@ export class ChatService extends Disposable implements ICSChatService {
 
 		this._sessionModels.deleteAndDispose(sessionId);
 		this._pendingRequests.get(sessionId)?.cancel();
+		this._pendingRequests.deleteAndDispose(sessionId);
 		this._onDidDisposeSession.fire({ sessionId, providerId: model.providerId, reason: 'cleared' });
 	}
 

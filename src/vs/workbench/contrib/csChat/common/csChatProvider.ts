@@ -29,7 +29,7 @@ export interface ICSChatResponseFragment {
 
 export interface ICSChatResponseProviderMetadata {
 	readonly extension: ExtensionIdentifier;
-	readonly displayName: string;
+	readonly model: string;
 	readonly description?: string;
 }
 
@@ -44,6 +44,8 @@ export interface ICSChatProviderService {
 
 	readonly _serviceBrand: undefined;
 
+	lookupChatResponseProvider(identifier: string): ICSChatResponseProviderMetadata | undefined;
+
 	registerChatResponseProvider(identifier: string, provider: IChatResponseProvider): IDisposable;
 
 	fetchChatResponse(identifier: string, messages: ICSChatMessage[], options: { [name: string]: any }, progress: IProgress<ICSChatResponseFragment>, token: CancellationToken): Promise<any>;
@@ -54,6 +56,9 @@ export class ChatProviderService implements ICSChatProviderService {
 
 	private readonly _providers: Map<string, IChatResponseProvider> = new Map();
 
+	lookupChatResponseProvider(identifier: string): ICSChatResponseProviderMetadata | undefined {
+		return this._providers.get(identifier)?.metadata;
+	}
 
 	registerChatResponseProvider(identifier: string, provider: IChatResponseProvider): IDisposable {
 		if (this._providers.has(identifier)) {

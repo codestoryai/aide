@@ -4,38 +4,37 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CancelablePromise, Queue, createCancelablePromise } from 'vs/base/common/async';
-import { Event } from 'vs/base/common/event';
+import { Emitter, Event } from 'vs/base/common/event';
 import { Disposable, DisposableStore } from 'vs/base/common/lifecycle';
 import { MovingAverage } from 'vs/base/common/numbers';
 import { StopWatch } from 'vs/base/common/stopwatch';
+import { themeColorFromId } from 'vs/base/common/themables';
 import { URI } from 'vs/base/common/uri';
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
-import { IBulkEditService } from 'vs/editor/browser/services/bulkEditService';
 import { ICodeEditorService } from 'vs/editor/browser/services/codeEditorService';
 import { ISingleEditOperation } from 'vs/editor/common/core/editOperation';
-import { IPosition, Position } from 'vs/editor/common/core/position';
+import { LineRange } from 'vs/editor/common/core/lineRange';
 import { IRange, Range } from 'vs/editor/common/core/range';
-import { Selection } from 'vs/editor/common/core/selection';
 import { IDocumentDiff } from 'vs/editor/common/diff/documentDiffProvider';
-import { IEditorDecorationsCollection, ScrollType } from 'vs/editor/common/editorCommon';
+import { IEditorDecorationsCollection } from 'vs/editor/common/editorCommon';
 import { IWorkspaceTextEdit, Location, WorkspaceEdit } from 'vs/editor/common/languages';
-import { ICursorStateComputer, IModelDecorationOptions, IModelDeltaDecoration, ITextModel, IValidEditOperation } from 'vs/editor/common/model';
-import { createTextBufferFactoryFromSnapshot } from 'vs/editor/common/model/textModel';
+import { IModelDeltaDecoration, ITextModel, IValidEditOperation, OverviewRulerLane } from 'vs/editor/common/model';
+import { ModelDecorationOptions, createTextBufferFactoryFromSnapshot } from 'vs/editor/common/model/textModel';
 import { IEditorWorkerService } from 'vs/editor/common/services/editorWorker';
 import { IModelService } from 'vs/editor/common/services/model';
 import { localize } from 'vs/nls';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IContextKey, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
 import { IInstantiationService, createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import { ServiceCollection } from 'vs/platform/instantiation/common/serviceCollection';
 import { ILogService } from 'vs/platform/log/common/log';
-import { IStorageService } from 'vs/platform/storage/common/storage';
+import { Progress } from 'vs/platform/progress/common/progress';
 import { ICSChatAgentEditRequest, ICSChatAgentEditResponse, ICSChatAgentService } from 'vs/workbench/contrib/csChat/common/csChatAgents';
 import { CONTEXT_CHAT_EDIT_CODEBLOCK_NUMBER_IN_PROGRESS, CONTEXT_CHAT_EDIT_RESPONSEID_IN_PROGRESS } from 'vs/workbench/contrib/csChat/common/csChatContextKeys';
 import { IChatEditSummary } from 'vs/workbench/contrib/csChat/common/csChatModel';
 import { IChatResponseViewModel } from 'vs/workbench/contrib/csChat/common/csChatViewModel';
 import { countWords } from 'vs/workbench/contrib/csChat/common/csChatWordCounter';
 import { ProgressingEditsOptions, asProgressiveEdit, performAsyncTextEdit } from 'vs/workbench/contrib/inlineCSChat/browser/inlineCSChatStrategies';
+import { CTX_INLINE_CHAT_CHANGE_HAS_DIFF, CTX_INLINE_CHAT_CHANGE_SHOWS_DIFF, overviewRulerInlineChatDiffInserted } from 'vs/workbench/contrib/inlineCSChat/common/inlineCSChat';
 
 interface ICSChatCodeblockTextModels {
 	textModel0: ITextModel;
@@ -60,7 +59,27 @@ export interface ICSChatEditSessionService {
 }
 
 export abstract class EditModeStrategy {
-	abstract dispose(): void;
+	protected static _decoBlock = ModelDecorationOptions.register({
+		description: 'cschat',
+		showIfCollapsed: false,
+		isWholeLine: true,
+		className: 'cschat-block-selection',
+	});
+
+	protected readonly _onDidAccept = new Emitter<void>();
+	protected readonly _onDidDiscard = new Emitter<void>();
+
+	readonly onDidAccept: Event<void> = this._onDidAccept.event;
+	readonly onDidDiscard: Event<void> = this._onDidDiscard.event;
+
+	toggleDiff?: () => any;
+
+	dispose(): void {
+		this._onDidAccept.dispose();
+		this._onDidDiscard.dispose();
+	}
+
+	abstract start(): Promise<void>;
 	abstract apply(): Promise<void>;
 	abstract cancel(): Promise<void>;
 	abstract makeProgressiveChanges(edits: ISingleEditOperation[], timings: ProgressingEditsOptions): Promise<void>;
@@ -329,11 +348,28 @@ export class ChatEditSessionService extends Disposable implements ICSChatEditSes
 }
 
 export class LiveStrategy extends EditModeStrategy {
+	private readonly _decoInsertedText = ModelDecorationOptions.register({
+		description: 'cschat-edit-modified-line',
+		className: 'cschat-edit-inserted-range-linehighlight',
+		isWholeLine: true,
+		overviewRuler: {
+			position: OverviewRulerLane.Full,
+			color: themeColorFromId(overviewRulerInlineChatDiffInserted),
+		}
+	});
 
-	protected _diffEnabled: boolean = false;
+	// private readonly _decoInsertedTextRange = ModelDecorationOptions.register({
+	// 	description: 'inline-chat-inserted-range-linehighlight',
+	// 	className: 'inline-chat-inserted-range',
+	// });
 
-	private readonly _diffDecorations: CSChatEditsDiffDecorations;
 	private readonly _store: DisposableStore = new DisposableStore();
+	private readonly _renderStore: DisposableStore = new DisposableStore();
+
+	private readonly _ctxCurrentChangeHasDiff: IContextKey<boolean>;
+	private readonly _ctxCurrentChangeShowsDiff: IContextKey<boolean>;
+
+	private readonly _progressiveEditingDecorations: IEditorDecorationsCollection;
 
 	private _editCount: number = 0;
 
@@ -342,111 +378,108 @@ export class LiveStrategy extends EditModeStrategy {
 		protected readonly _models: ICSChatCodeblockTextModels,
 		protected readonly _editor: ICodeEditor,
 		protected readonly _response: IChatResponseViewModel,
-		@IConfigurationService configService: IConfigurationService,
-		@IStorageService protected _storageService: IStorageService,
-		@IBulkEditService protected readonly _bulkEditService: IBulkEditService,
+		@IContextKeyService contextKeyService: IContextKeyService,
 		@IEditorWorkerService protected readonly _editorWorkerService: IEditorWorkerService,
 		@IInstantiationService protected readonly _instaService: IInstantiationService,
 	) {
 		super();
-		this._diffEnabled = configService.getValue<boolean>('inlineChat.showDiff');
+		this._ctxCurrentChangeHasDiff = CTX_INLINE_CHAT_CHANGE_HAS_DIFF.bindTo(contextKeyService);
+		this._ctxCurrentChangeShowsDiff = CTX_INLINE_CHAT_CHANGE_SHOWS_DIFF.bindTo(contextKeyService);
 
-		this._diffDecorations = new CSChatEditsDiffDecorations(this._editor, this._diffEnabled);
-		this._diffDecorations.visible = this._diffEnabled;
-
-		this._store.add(configService.onDidChangeConfiguration(e => {
-			if (e.affectsConfiguration('inlineChat.showDiff')) {
-				this._diffEnabled = !this._diffEnabled;
-				this._doToggleDiff();
-			}
-		}));
+		this._progressiveEditingDecorations = this._editor.createDecorationsCollection();
 	}
 
 	override dispose(): void {
-		this._diffDecorations.clear();
+		this._resetDiff();
 		this._store.dispose();
+		super.dispose();
 	}
 
-	protected _doToggleDiff(): void {
-		this._diffDecorations.visible = this._diffEnabled;
+	private _resetDiff(): void {
+		this._ctxCurrentChangeHasDiff.reset();
+		this._ctxCurrentChangeShowsDiff.reset();
+		this._renderStore.clear();
+		this._progressiveEditingDecorations.clear();
+	}
+
+	async start() {
+		this._resetDiff();
 	}
 
 	async apply() {
+		this._resetDiff();
 		if (this._editCount > 0) {
 			this._editor.pushUndoStop();
 		}
-		this._diffDecorations.clear();
 	}
 
 	async cancel() {
+		this._resetDiff();
 		const { textModelN: modelN, textModelNAltVersion, textModelNSnapshotAltVersion } = this._models;
 		if (modelN.isDisposed()) {
 			return;
 		}
 		const targetAltVersion = textModelNSnapshotAltVersion ?? textModelNAltVersion;
-		LiveStrategy._undoModelUntil(modelN, targetAltVersion);
-		this._diffDecorations.clear();
-	}
-
-	override async makeChanges(edits: ISingleEditOperation[]): Promise<void> {
-		// push undo stop before first edit
-		if (++this._editCount === 1) {
-			this._editor.pushUndoStop();
-			// Scroll to the location of the first edit
-			const firstEditRange = edits[0].range;
-			const firstEditPosition: IPosition = {
-				lineNumber: firstEditRange.startLineNumber,
-				column: firstEditRange.startColumn
-			};
-			this._editor.revealPositionInCenter(firstEditPosition, ScrollType.Immediate);
-		}
-		this._editor.executeEdits('inline-chat-live', edits, this.cursorStateComputerAndInlineDiffCollection);
+		await undoModelUntil(modelN, targetAltVersion);
 	}
 
 	override async undoChanges(altVersionId: number): Promise<void> {
+		this._renderStore.clear();
+
 		const { textModelN } = this._models;
-		LiveStrategy._undoModelUntil(textModelN, altVersionId);
+		await undoModelUntil(textModelN, altVersionId);
+	}
+
+	override async makeChanges(edits: ISingleEditOperation[]): Promise<void> {
+		return this._makeChanges(edits, undefined);
 	}
 
 	override async makeProgressiveChanges(edits: ISingleEditOperation[], opts: ProgressingEditsOptions): Promise<void> {
+		return this._makeChanges(edits, opts);
+	}
+
+	private async _makeChanges(edits: ISingleEditOperation[], opts: ProgressingEditsOptions | undefined): Promise<void> {
+
 		// push undo stop before first edit
 		if (++this._editCount === 1) {
 			this._editor.pushUndoStop();
 		}
 
-		const durationInSec = opts.duration / 1000;
-		for (const edit of edits) {
-			const wordCount = countWords(edit.text ?? '');
-			const speed = wordCount / durationInSec;
-			await performAsyncTextEdit(this._models.textModelN, asProgressiveEdit(edit, speed, opts.token), this.cursorStateComputerAndInlineDiffCollection);
-		}
-	}
+		// add decorations once per line that got edited
+		const progress = new Progress<IValidEditOperation[]>(edits => {
 
-	override async renderChanges() {
-		const diff = await this._editorWorkerService.computeDiff(this._models.textModel0.uri, this._models.textModelN.uri, { ignoreTrimWhitespace: false, maxComputationTimeMs: 5000, computeMoves: false }, 'advanced');
-		this._updateSummaryMessage(this._models.textModelN.uri, diff);
-		this._diffDecorations.update();
-	}
+			const newLines = new Set<number>();
+			for (const edit of edits) {
+				LineRange.fromRange(edit.range).forEach(line => newLines.add(line));
+			}
+			const existingRanges = this._progressiveEditingDecorations.getRanges().map(LineRange.fromRange);
+			for (const existingRange of existingRanges) {
+				existingRange.forEach(line => newLines.delete(line));
+			}
+			const newDecorations: IModelDeltaDecoration[] = [];
+			for (const line of newLines) {
+				newDecorations.push({ range: new Range(line, 1, line, Number.MAX_VALUE), options: this._decoInsertedText });
+			}
 
-	override getEditRangeInProgress(): Location[] {
-		const uri = this._models.textModel0.uri;
-		const wrappingRange: IRange = this._diffDecorations.decorationRanges.reduce((prev, curr) => {
-			return {
-				startLineNumber: Math.min(prev.startLineNumber, curr.startLineNumber),
-				startColumn: 1,
-				endLineNumber: Math.max(prev.endLineNumber, curr.endLineNumber),
-				endColumn: 1
-			};
-		}, { startLineNumber: Number.MAX_VALUE, startColumn: 1, endLineNumber: 0, endColumn: 1 } as IRange);
-		return [{
-			range: wrappingRange,
-			uri
-		}];
-	}
+			this._progressiveEditingDecorations.append(newDecorations);
+		});
 
-	private static _undoModelUntil(model: ITextModel, targetAltVersion: number): void {
-		while (targetAltVersion < model.getAlternativeVersionId() && model.canUndo()) {
-			model.undo();
+		if (opts) {
+			// ASYNC
+			const durationInSec = opts.duration / 1000;
+			for (const edit of edits) {
+				const wordCount = countWords(edit.text ?? '');
+				const speed = wordCount / durationInSec;
+				// console.log({ durationInSec, wordCount, speed: wordCount / durationInSec });
+				await performAsyncTextEdit(this._models.textModelN, asProgressiveEdit(edit, speed, opts.token), progress);
+			}
+
+		} else {
+			// SYNC
+			this._editor.executeEdits('inline-chat-live', edits, undoEdits => {
+				progress.report(undoEdits);
+				return null;
+			});
 		}
 	}
 
@@ -485,74 +518,17 @@ export class LiveStrategy extends EditModeStrategy {
 		this._response.recordEdits(this._editCodeblockInProgress, editSummary);
 	}
 
-	private cursorStateComputerAndInlineDiffCollection: ICursorStateComputer = (undoEdits) => {
-		let last: Position | null = null;
-		for (const edit of undoEdits) {
-			last = !last || last.isBefore(edit.range.getEndPosition()) ? edit.range.getEndPosition() : last;
-			this._diffDecorations.collectEditOperation(edit);
-		}
-		return last && [Selection.fromPositions(last)];
-	};
+	override renderChanges(): Promise<void> {
+		throw new Error('Method not implemented.');
+	}
+
+	override getEditRangeInProgress(): Location[] {
+		throw new Error('Method not implemented.');
+	}
 }
 
-export class CSChatEditsDiffDecorations {
-
-	private readonly _collection: IEditorDecorationsCollection;
-
-	private _data: { tracking: IModelDeltaDecoration; decorating: IModelDecorationOptions }[] = [];
-	private _visible: boolean = false;
-
-	constructor(editor: ICodeEditor, visible: boolean = false) {
-		this._collection = editor.createDecorationsCollection();
-		this._visible = visible;
-	}
-
-	get visible() {
-		return this._visible;
-	}
-
-	set visible(value: boolean) {
-		this._visible = value;
-		this.update();
-	}
-
-	get decorationRanges() {
-		return this._data.map(d => d.tracking.range);
-	}
-
-	clear() {
-		this._collection.clear();
-		this._data.length = 0;
-	}
-
-	collectEditOperation(op: IValidEditOperation) {
-		this._data.push(CSChatEditsDiffDecorations._asDecorationData(op));
-	}
-
-	update() {
-		this._collection.set(this._data.map(d => {
-			const res = { ...d.tracking };
-			if (this._visible) {
-				res.options = { ...res.options, ...d.decorating };
-			}
-			return res;
-		}));
-	}
-
-	private static _asDecorationData(edit: IValidEditOperation): { tracking: IModelDeltaDecoration; decorating: IModelDecorationOptions } {
-		const tracking: IModelDeltaDecoration = {
-			range: edit.range,
-			options: {
-				description: 'cschat-edits-inline-diff',
-			}
-		};
-
-		const decorating: IModelDecorationOptions = {
-			description: 'cschat-edits-inline-diff',
-			className: !edit.range.isEmpty() ? 'cschat-edits-lines-inserted-range' : undefined,
-			showIfCollapsed: true,
-		};
-
-		return { tracking, decorating };
+async function undoModelUntil(model: ITextModel, targetAltVersion: number): Promise<void> {
+	while (targetAltVersion < model.getAlternativeVersionId() && model.canUndo()) {
+		await model.undo();
 	}
 }

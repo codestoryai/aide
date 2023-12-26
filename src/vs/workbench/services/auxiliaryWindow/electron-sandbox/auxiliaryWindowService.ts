@@ -12,12 +12,14 @@ import { IWindowsConfiguration } from 'vs/platform/window/common/window';
 import { DisposableStore } from 'vs/base/common/lifecycle';
 import { INativeHostService } from 'vs/platform/native/common/native';
 import { IDialogService } from 'vs/platform/dialogs/common/dialogs';
-import { getActiveWindow } from 'vs/base/browser/dom';
 import { CodeWindow } from 'vs/base/browser/window';
 import { mark } from 'vs/base/common/performance';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { NativeWindow } from 'vs/workbench/electron-sandbox/window';
 import { ShutdownReason } from 'vs/workbench/services/lifecycle/common/lifecycle';
+import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
+import { Barrier } from 'vs/base/common/async';
+import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 
 type NativeCodeWindow = CodeWindow & {
 	readonly vscode: ISandboxGlobals;
@@ -30,11 +32,12 @@ export class NativeAuxiliaryWindow extends AuxiliaryWindow {
 	constructor(
 		window: CodeWindow,
 		container: HTMLElement,
+		stylesHaveLoaded: Barrier,
 		@IConfigurationService configurationService: IConfigurationService,
 		@INativeHostService private readonly nativeHostService: INativeHostService,
 		@IInstantiationService private readonly instantiationService: IInstantiationService
 	) {
-		super(window, container, configurationService);
+		super(window, container, stylesHaveLoaded, configurationService);
 	}
 
 	protected override async confirmBeforeClose(e: BeforeUnloadEvent): Promise<void> {
@@ -43,11 +46,12 @@ export class NativeAuxiliaryWindow extends AuxiliaryWindow {
 		}
 
 		e.preventDefault();
+		e.returnValue = true;
 
 		const confirmed = await this.instantiationService.invokeFunction(accessor => NativeWindow.confirmOnShutdown(accessor, ShutdownReason.CLOSE));
 		if (confirmed) {
 			this.skipUnloadConfirmation = true;
-			this.nativeHostService.closeWindowById(this.window.vscodeWindowId);
+			this.nativeHostService.closeWindow({ targetWindowId: this.window.vscodeWindowId });
 		}
 	}
 }
@@ -59,9 +63,11 @@ export class NativeAuxiliaryWindowService extends BrowserAuxiliaryWindowService 
 		@IConfigurationService configurationService: IConfigurationService,
 		@INativeHostService private readonly nativeHostService: INativeHostService,
 		@IDialogService dialogService: IDialogService,
-		@IInstantiationService private readonly instantiationService: IInstantiationService
+		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@ITelemetryService telemetryService: ITelemetryService,
+		@IEnvironmentService private readonly environmentService: IEnvironmentService
 	) {
-		super(layoutService, dialogService, configurationService);
+		super(layoutService, dialogService, configurationService, telemetryService);
 	}
 
 	protected override async resolveWindowId(auxiliaryWindow: NativeCodeWindow): Promise<number> {
@@ -72,7 +78,7 @@ export class NativeAuxiliaryWindowService extends BrowserAuxiliaryWindowService 
 		return windowId;
 	}
 
-	protected override createContainer(auxiliaryWindow: NativeCodeWindow, disposables: DisposableStore): HTMLElement {
+	protected override createContainer(auxiliaryWindow: NativeCodeWindow, disposables: DisposableStore) {
 
 		// Zoom level
 		const windowConfig = this.configurationService.getValue<IWindowsConfiguration>();
@@ -91,16 +97,20 @@ export class NativeAuxiliaryWindowService extends BrowserAuxiliaryWindowService 
 		const that = this;
 		const originalWindowFocus = auxiliaryWindow.focus.bind(auxiliaryWindow);
 		auxiliaryWindow.focus = function () {
+			if (that.environmentService.extensionTestsLocationURI) {
+				return; // no focus when we are running tests from CLI
+			}
+
 			originalWindowFocus();
 
-			if (getActiveWindow() !== auxiliaryWindow) {
+			if (!auxiliaryWindow.document.hasFocus()) {
 				that.nativeHostService.focusWindow({ targetWindowId: auxiliaryWindow.vscodeWindowId });
 			}
 		};
 	}
 
-	protected override createAuxiliaryWindow(targetWindow: CodeWindow, container: HTMLElement): AuxiliaryWindow {
-		return new NativeAuxiliaryWindow(targetWindow, container, this.configurationService, this.nativeHostService, this.instantiationService);
+	protected override createAuxiliaryWindow(targetWindow: CodeWindow, container: HTMLElement, stylesHaveLoaded: Barrier,): AuxiliaryWindow {
+		return new NativeAuxiliaryWindow(targetWindow, container, stylesHaveLoaded, this.configurationService, this.nativeHostService, this.instantiationService);
 	}
 }
 

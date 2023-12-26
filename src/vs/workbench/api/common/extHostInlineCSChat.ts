@@ -202,34 +202,35 @@ export class ExtHostCSChatEditor implements ExtHostInlineCSChatShape {
 			placeholder: res.placeholder,
 		};
 
-		if (ExtHostCSChatEditor._isEditResponse(res)) {
-			const { edits, contents } = res;
-			const message = contents !== undefined ? typeConvert.MarkdownString.from(contents) : undefined;
-			if (edits instanceof extHostTypes.WorkspaceEdit) {
-				return {
-					...stub,
-					id,
-					type: InlineChatResponseType.BulkEdit,
-					edits: typeConvert.WorkspaceEdit.from(edits),
-					message
-				};
-
-			} else {
-				return {
-					...stub,
-					id,
-					type: InlineChatResponseType.EditorEdit,
-					edits: (<vscode.TextEdit[]>edits).map(typeConvert.TextEdit.from),
-					message
-				};
-			}
+		if (!ExtHostCSChatEditor._isEditResponse(res)) {
+			return {
+				...stub,
+				id,
+				type: InlineChatResponseType.EditorEdit,
+				message: typeConvert.MarkdownString.from(res.contents),
+				edits: []
+			};
 		}
-		return {
-			...stub,
-			id,
-			type: InlineChatResponseType.Message,
-			message: typeConvert.MarkdownString.from(res.contents),
-		};
+
+		const { edits, contents } = res;
+		const message = contents !== undefined ? typeConvert.MarkdownString.from(contents) : undefined;
+		if (edits instanceof extHostTypes.WorkspaceEdit) {
+			return {
+				...stub,
+				id,
+				type: InlineChatResponseType.BulkEdit,
+				edits: typeConvert.WorkspaceEdit.from(edits),
+				message
+			};
+		} else {
+			return {
+				...stub,
+				id,
+				type: InlineChatResponseType.EditorEdit,
+				edits: (<vscode.TextEdit[]>edits).map(typeConvert.TextEdit.from),
+				message
+			};
+		}
 	}
 
 	async $provideFollowups(handle: number, sessionId: number, responseId: number, token: CancellationToken): Promise<ICSChatReplyFollowup[] | undefined> {

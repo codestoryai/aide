@@ -31,8 +31,8 @@ import { ICodeBlockActionContext } from 'vs/workbench/contrib/csChat/browser/cod
 import { ICSChatWidgetService } from 'vs/workbench/contrib/csChat/browser/csChat';
 import { ICSChatEditSessionService } from 'vs/workbench/contrib/csChat/browser/csChatEdits';
 import { ICSChatAgentEditRequest } from 'vs/workbench/contrib/csChat/common/csChatAgents';
-import { CONTEXT_CHAT_EDIT_RESPONSEID_IN_PROGRESS, CONTEXT_IN_CHAT_SESSION, CONTEXT_PROVIDER_EXISTS } from 'vs/workbench/contrib/csChat/common/csChatContextKeys';
-import { ICSChatService, IDocumentContext, InteractiveSessionCopyKind } from 'vs/workbench/contrib/csChat/common/csChatService';
+import { CONTEXT_CHAT_EDIT_RESPONSEID_IN_PROGRESS, CONTEXT_IN_CHAT_INPUT, CONTEXT_IN_CHAT_SESSION, CONTEXT_PROVIDER_EXISTS } from 'vs/workbench/contrib/csChat/common/csChatContextKeys';
+import { ChatAgentCopyKind, ICSChatService, IDocumentContext } from 'vs/workbench/contrib/csChat/common/csChatService';
 import { IChatResponseViewModel, isResponseVM } from 'vs/workbench/contrib/csChat/common/csChatViewModel';
 import { CTX_INLINE_CHAT_VISIBLE } from 'vs/workbench/contrib/inlineCSChat/common/inlineCSChat';
 import { insertCell } from 'vs/workbench/contrib/notebook/browser/controller/cellOperations';
@@ -129,7 +129,7 @@ export function registerChatCodeBlockActions() {
 					action: {
 						kind: 'copy',
 						codeBlockIndex: context.codeBlockIndex,
-						copyType: InteractiveSessionCopyKind.Toolbar,
+						copyKind: ChatAgentCopyKind.Toolbar,
 						copiedCharacters: context.code.length,
 						totalCharacters: context.code.length,
 						copiedText: context.code,
@@ -172,7 +172,7 @@ export function registerChatCodeBlockActions() {
 			action: {
 				kind: 'copy',
 				codeBlockIndex: context.codeBlockIndex,
-				copyType: InteractiveSessionCopyKind.Action,
+				copyKind: ChatAgentCopyKind.Action,
 				copiedText,
 				copiedCharacters: copiedText.length,
 				totalCharacters,
@@ -291,7 +291,7 @@ export function registerChatCodeBlockActions() {
 					when: CONTEXT_IN_CHAT_SESSION,
 				},
 				keybinding: {
-					when: CONTEXT_IN_CHAT_SESSION,
+					when: ContextKeyExpr.and(CONTEXT_IN_CHAT_SESSION, CONTEXT_IN_CHAT_INPUT.negate()),
 					primary: KeyMod.CtrlCmd | KeyCode.Enter,
 					mac: { primary: KeyMod.WinCtrl | KeyCode.Enter },
 					weight: KeybindingWeight.WorkbenchContrib
@@ -566,7 +566,7 @@ export function registerChatCodeBlockActions() {
 				terminalGroupService.showPanel(true);
 			}
 
-			terminal.sendText(context.code, false, true);
+			terminal.runCommand(context.code, false);
 
 			if (isResponseVM(context.element)) {
 				chatService.notifyUserAction({

@@ -10,7 +10,7 @@ import { Disposable, MutableDisposable } from 'vs/base/common/lifecycle';
 import { isEqual } from 'vs/base/common/resources';
 import { URI } from 'vs/base/common/uri';
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
-import { EditorOption } from 'vs/editor/common/config/editorOptions';
+import { EditorOption, ShowLightbulbIconMode } from 'vs/editor/common/config/editorOptions';
 import { Position } from 'vs/editor/common/core/position';
 import { Selection } from 'vs/editor/common/core/selection';
 import { LanguageFeatureRegistry } from 'vs/editor/common/languageFeatureRegistry';
@@ -45,7 +45,7 @@ class CodeActionOracle extends Disposable {
 	}
 
 	public trigger(trigger: CodeActionTrigger): void {
-		const selection = this._editor.getSelection();
+		const selection = this._getRangeOfSelectionUnlessWhitespaceEnclosed(trigger);
 		this._signalChange(selection ? { trigger, selection } : undefined);
 	}
 
@@ -60,6 +60,50 @@ class CodeActionOracle extends Disposable {
 		this._autoTriggerTimer.cancelAndSet(() => {
 			this.trigger({ type: CodeActionTriggerType.Auto, triggerAction: CodeActionTriggerSource.Default });
 		}, this._delay);
+	}
+
+	private _getRangeOfSelectionUnlessWhitespaceEnclosed(trigger: CodeActionTrigger): Selection | undefined {
+		if (!this._editor.hasModel()) {
+			return undefined;
+		}
+		const selection = this._editor.getSelection();
+		if (trigger.type === CodeActionTriggerType.Invoke) {
+			return selection;
+		}
+		const enabled = this._editor.getOption(EditorOption.lightbulb).enabled;
+		if (enabled === ShowLightbulbIconMode.Off) {
+			return undefined;
+		} else if (enabled === ShowLightbulbIconMode.On) {
+			return selection;
+		} else if (enabled === ShowLightbulbIconMode.OnCode) {
+			const isSelectionEmpty = selection.isEmpty();
+			if (!isSelectionEmpty) {
+				return selection;
+			}
+			const model = this._editor.getModel();
+			const { lineNumber, column } = selection.getPosition();
+			const line = model.getLineContent(lineNumber);
+			if (line.length === 0) {
+				// empty line
+				return undefined;
+			} else if (column === 1) {
+				// look only right
+				if (/\s/.test(line[0])) {
+					return undefined;
+				}
+			} else if (column === model.getLineMaxColumn(lineNumber)) {
+				// look only left
+				if (/\s/.test(line[line.length - 1])) {
+					return undefined;
+				}
+			} else {
+				// look left and right
+				if (/\s/.test(line[column - 2]) && /\s/.test(line[column - 1])) {
+					return undefined;
+				}
+			}
+		}
+		return selection;
 	}
 }
 
@@ -132,7 +176,11 @@ export class CodeActionModel extends Disposable {
 		this._register(this._editor.onDidChangeModel(() => this._update()));
 		this._register(this._editor.onDidChangeModelLanguage(() => this._update()));
 		this._register(this._registry.onDidChange(() => this._update()));
-
+		this._register(this._editor.onDidChangeConfiguration((e) => {
+			if (e.hasChanged(EditorOption.lightbulb)) {
+				this._update();
+			}
+		}));
 		this._update();
 	}
 

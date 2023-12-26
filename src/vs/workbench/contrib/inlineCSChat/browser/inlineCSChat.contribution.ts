@@ -7,7 +7,7 @@ import { registerAction2 } from 'vs/platform/actions/common/actions';
 import { EditorContributionInstantiation, registerEditorContribution } from 'vs/editor/browser/editorExtensions';
 import { InlineChatController } from 'vs/workbench/contrib/inlineCSChat/browser/inlineCSChatController';
 import * as InlineChatActions from 'vs/workbench/contrib/inlineCSChat/browser/inlineCSChatActions';
-import { IInlineCSChatService, INLINE_CHAT_DECORATIONS_ID, INLINE_CHAT_ID, INTERACTIVE_EDITOR_ACCESSIBILITY_HELP_ID } from 'vs/workbench/contrib/inlineCSChat/common/inlineCSChat';
+import { IInlineCSChatService, INLINE_CHAT_ID, INTERACTIVE_EDITOR_ACCESSIBILITY_HELP_ID } from 'vs/workbench/contrib/inlineCSChat/common/inlineCSChat';
 import { InstantiationType, registerSingleton } from 'vs/platform/instantiation/common/extensions';
 import { InlineCSChatServiceImpl } from 'vs/workbench/contrib/inlineCSChat/common/inlineCSChatServiceImpl';
 import { IInlineChatSessionService, InlineChatSessionService } from 'vs/workbench/contrib/inlineCSChat/browser/inlineCSChatSession';
@@ -16,7 +16,6 @@ import { LifecyclePhase } from 'vs/workbench/services/lifecycle/common/lifecycle
 import { InlineChatNotebookContribution } from 'vs/workbench/contrib/inlineCSChat/browser/inlineCSChatNotebook';
 import { IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions } from 'vs/workbench/common/contributions';
 import { InlineChatAccessibleViewContribution } from './inlineCSChatAccessibleView';
-import { InlineChatDecorationsContribution } from 'vs/workbench/contrib/inlineCSChat/browser/inlineCSChatDecorations';
 import 'vs/workbench/contrib/inlineCSChat/browser/contrib/inlineCSChatInputEditorContrib';
 import { IInlineCSChatVariablesService } from 'vs/workbench/contrib/csChat/common/csChatVariables';
 import { InlineCSChatVariablesService } from 'vs/workbench/contrib/inlineCSChat/browser/inlineCSChatVariables';
@@ -27,9 +26,10 @@ registerSingleton(IInlineCSChatVariablesService, InlineCSChatVariablesService, I
 
 registerEditorContribution(INLINE_CHAT_ID, InlineChatController, EditorContributionInstantiation.Eager); // EAGER because of notebook dispose/create of editors
 registerEditorContribution(INTERACTIVE_EDITOR_ACCESSIBILITY_HELP_ID, InlineChatActions.InlineAccessibilityHelpContribution, EditorContributionInstantiation.Eventually);
-registerEditorContribution(INLINE_CHAT_DECORATIONS_ID, InlineChatDecorationsContribution, EditorContributionInstantiation.AfterFirstRender);
 
 registerAction2(InlineChatActions.StartSessionAction);
+registerAction2(InlineChatActions.CloseAction);
+registerAction2(InlineChatActions.ConfigureInlineChatAction);
 registerAction2(InlineChatActions.UnstashSessionAction);
 registerAction2(InlineChatActions.MakeRequestAction);
 registerAction2(InlineChatActions.StopRequestAction);
@@ -48,11 +48,11 @@ registerAction2(InlineChatActions.ViewInChatAction);
 registerAction2(InlineChatActions.ExpandMessageAction);
 registerAction2(InlineChatActions.ContractMessageAction);
 
-registerAction2(InlineChatActions.ToggleInlineDiff);
+registerAction2(InlineChatActions.ToggleDiffForChange);
 registerAction2(InlineChatActions.FeebackHelpfulCommand);
 registerAction2(InlineChatActions.FeebackUnhelpfulCommand);
 registerAction2(InlineChatActions.ReportIssueForBugCommand);
-registerAction2(InlineChatActions.ApplyPreviewEdits);
+registerAction2(InlineChatActions.AcceptChanges);
 
 registerAction2(InlineChatActions.CopyRecordings);
 

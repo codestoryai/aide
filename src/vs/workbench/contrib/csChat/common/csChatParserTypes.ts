@@ -3,11 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { revive } from 'vs/base/common/marshalling';
 import { IOffsetRange, OffsetRange } from 'vs/editor/common/core/offsetRange';
 import { IRange } from 'vs/editor/common/core/range';
-import { Location } from 'vs/editor/common/languages';
 import { IChatAgent, ICSChatAgentCommand } from 'vs/workbench/contrib/csChat/common/csChatAgents';
-import { ISlashCommand } from 'vs/workbench/contrib/csChat/common/csChatService';
+import { IChatSlashData } from 'vs/workbench/contrib/csChat/common/csChatSlashCommands';
+import { ICSChatRequestVariableValue } from 'vs/workbench/contrib/csChat/common/csChatVariables';
 
 // These are in a separate file to avoid circular dependencies with the dependencies of the parser
 
@@ -99,7 +100,7 @@ export class ChatRequestAgentSubcommandPart implements IParsedChatRequestPart {
 export class ChatRequestSlashCommandPart implements IParsedChatRequestPart {
 	static readonly Kind = 'slash';
 	readonly kind = ChatRequestSlashCommandPart.Kind;
-	constructor(readonly range: OffsetRange, readonly editorRange: IRange, readonly slashCommand: ISlashCommand) { }
+	constructor(readonly range: OffsetRange, readonly editorRange: IRange, readonly slashCommand: IChatSlashData) { }
 
 	get text(): string {
 		return `${chatSubcommandLeader}${this.slashCommand.command}`;
@@ -113,21 +114,18 @@ export class ChatRequestSlashCommandPart implements IParsedChatRequestPart {
 /**
  * An invocation of a dynamic reference like '@file:'
  */
-export class ChatRequestDynamicReferencePart implements IParsedChatRequestPart {
+export class ChatRequestDynamicVariablePart implements IParsedChatRequestPart {
 	static readonly Kind = 'dynamic';
-	readonly kind = ChatRequestDynamicReferencePart.Kind;
-	constructor(readonly range: OffsetRange, readonly editorRange: IRange, readonly leader: string, readonly name: string, readonly arg: string, readonly data: Location) { }
+	readonly kind = ChatRequestDynamicVariablePart.Kind;
+	constructor(readonly range: OffsetRange, readonly editorRange: IRange, readonly text: string, readonly data: ICSChatRequestVariableValue[]) { }
 
 	get referenceText(): string {
-		return `${this.name}:${this.arg}`;
-	}
-
-	get text(): string {
-		return `${this.leader}${this.referenceText}`;
+		return this.text;
 	}
 
 	get promptText(): string {
-		return `[${this.text}](values:${this.referenceText})`;
+		// This needs to be dynamically generated for de-duping
+		return ``;
 	}
 }
 
@@ -166,14 +164,12 @@ export function reviveParsedChatRequest(serialized: IParsedChatRequest): IParsed
 					part.editorRange,
 					(part as ChatRequestSlashCommandPart).slashCommand
 				);
-			} else if (part.kind === ChatRequestDynamicReferencePart.Kind) {
-				return new ChatRequestDynamicReferencePart(
+			} else if (part.kind === ChatRequestDynamicVariablePart.Kind) {
+				return new ChatRequestDynamicVariablePart(
 					new OffsetRange(part.range.start, part.range.endExclusive),
 					part.editorRange,
-					(part as ChatRequestDynamicReferencePart).leader,
-					(part as ChatRequestDynamicReferencePart).name,
-					(part as ChatRequestDynamicReferencePart).arg,
-					(part as ChatRequestDynamicReferencePart).data
+					(part as ChatRequestDynamicVariablePart).text,
+					revive(part as ChatRequestDynamicVariablePart).data
 				);
 			} else {
 				throw new Error(`Unknown chat request part: ${part.kind}`);

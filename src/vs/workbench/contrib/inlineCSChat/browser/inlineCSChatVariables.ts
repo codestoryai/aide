@@ -8,9 +8,9 @@ import { onUnexpectedExternalError } from 'vs/base/common/errors';
 import { Iterable } from 'vs/base/common/iterator';
 import { IDisposable, toDisposable } from 'vs/base/common/lifecycle';
 import { ICodeEditorService } from 'vs/editor/browser/services/codeEditorService';
-import { IParsedChatRequest, ChatRequestVariablePart, ChatRequestDynamicReferencePart } from 'vs/workbench/contrib/csChat/common/csChatParserTypes';
-import { ICSChatRequestVariableValue, ICSChatVariableData, IChatVariableResolveResult, IDynamicReference, IInlineChatVariableResolver, IInlineCSChatVariablesService } from 'vs/workbench/contrib/csChat/common/csChatVariables';
-import { ChatDynamicReferenceModel } from 'vs/workbench/contrib/inlineCSChat/browser/contrib/inlineCSChatDynamicReferences';
+import { IParsedChatRequest, ChatRequestVariablePart, ChatRequestDynamicVariablePart } from 'vs/workbench/contrib/csChat/common/csChatParserTypes';
+import { ICSChatRequestVariableValue, ICSChatVariableData, IChatVariableResolveResult, IDynamicVariable, IInlineChatVariableResolver, IInlineCSChatVariablesService } from 'vs/workbench/contrib/csChat/common/csChatVariables';
+import { ChatDynamicVariableModel } from 'vs/workbench/contrib/inlineCSChat/browser/contrib/inlineCSChatDynamicVariables';
 import { InlineChatController } from 'vs/workbench/contrib/inlineCSChat/browser/inlineCSChatController';
 
 interface IChatData {
@@ -47,10 +47,12 @@ export class InlineCSChatVariablesService implements IInlineCSChatVariablesServi
 							}
 						}).catch(onUnexpectedExternalError));
 					}
-				} else if (part instanceof ChatRequestDynamicReferencePart) {
-					// Maybe the dynamic reference should include a full IChatRequestVariableValue[] at the time it is inserted?
-					resolvedVariables[part.referenceText] = [{ level: 'full', value: JSON.stringify({ uri: part.data.uri.toString(), range: part.data.range }) }];
-					parsedPrompt[i] = part.promptText;
+				} else if (part instanceof ChatRequestDynamicVariablePart) {
+					const referenceName = this.getUniqueReferenceName(part.referenceText, resolvedVariables);
+					resolvedVariables[referenceName] = part.data;
+					const safeText = part.text.replace(/[\[\]]/g, '_');
+					const safeTarget = referenceName.replace(/[\(\)]/g, '_');
+					parsedPrompt[i] = `[${safeText}](values:${safeTarget})`;
 				} else {
 					parsedPrompt[i] = part.promptText;
 				}
@@ -64,6 +66,14 @@ export class InlineCSChatVariablesService implements IInlineCSChatVariablesServi
 		};
 	}
 
+	private getUniqueReferenceName(name: string, vars: Record<string, any>): string {
+		let i = 1;
+		while (vars[name]) {
+			name = `${name}_${i++}`;
+		}
+		return name;
+	}
+
 	hasVariable(name: string): boolean {
 		return this._resolver.has(name.toLowerCase());
 	}
@@ -73,7 +83,7 @@ export class InlineCSChatVariablesService implements IInlineCSChatVariablesServi
 		return Iterable.filter(all, data => !data.hidden);
 	}
 
-	getDynamicReferences(): ReadonlyArray<IDynamicReference> {
+	getDynamicVariables(): ReadonlyArray<IDynamicVariable> {
 		const codeEditor = this.codeEditorService.getActiveCodeEditor();
 		if (!codeEditor) {
 			return [];
@@ -84,12 +94,12 @@ export class InlineCSChatVariablesService implements IInlineCSChatVariablesServi
 			return [];
 		}
 
-		const model = widget.getContrib<ChatDynamicReferenceModel>(ChatDynamicReferenceModel.ID);
+		const model = widget.getContrib<ChatDynamicVariableModel>(ChatDynamicVariableModel.ID);
 		if (!model) {
 			return [];
 		}
 
-		return model.references;
+		return model.variables;
 	}
 
 	registerVariable(data: ICSChatVariableData, resolver: IInlineChatVariableResolver): IDisposable {

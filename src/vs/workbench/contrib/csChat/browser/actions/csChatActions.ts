@@ -12,7 +12,7 @@ import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
 import { EditorAction, EditorAction2, ServicesAccessor, registerEditorAction } from 'vs/editor/browser/editorExtensions';
 import { ICodeEditorService } from 'vs/editor/browser/services/codeEditorService';
 import { EditorContextKeys } from 'vs/editor/common/editorContextKeys';
-import { localize } from 'vs/nls';
+import { localize, localize2 } from 'vs/nls';
 import { Action2, IAction2Options, MenuId, registerAction2 } from 'vs/platform/actions/common/actions';
 import { ContextKeyExpr } from 'vs/platform/contextkey/common/contextkey';
 import { KeybindingWeight } from 'vs/platform/keybinding/common/keybindingsRegistry';
@@ -24,15 +24,14 @@ import { ViewAction } from 'vs/workbench/browser/parts/views/viewPane';
 import { IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions } from 'vs/workbench/common/contributions';
 import { IViewsService } from 'vs/workbench/common/views';
 import { AccessibilityHelpAction } from 'vs/workbench/contrib/accessibility/browser/accessibleViewActions';
-import { ICSChatContributionService } from 'vs/workbench/contrib/csChat/common/csChatContributionService';
 import { runAccessibilityHelpAction } from 'vs/workbench/contrib/csChat/browser/actions/csChatAccessibilityHelp';
-import { ChatDynamicReferenceModel } from 'vs/workbench/contrib/csChat/browser/contrib/csChatDynamicReferences';
 import { ICSChatWidgetService } from 'vs/workbench/contrib/csChat/browser/csChat';
 import { IChatEditorOptions } from 'vs/workbench/contrib/csChat/browser/csChatEditor';
 import { ChatEditorInput } from 'vs/workbench/contrib/csChat/browser/csChatEditorInput';
 import { ChatViewPane } from 'vs/workbench/contrib/csChat/browser/csChatViewPane';
 import { ICSChatAgentService } from 'vs/workbench/contrib/csChat/common/csChatAgents';
-import { CONTEXT_IN_CHAT_INPUT, CONTEXT_IN_CHAT_SESSION, CONTEXT_PROVIDER_EXISTS, CONTEXT_REQUEST, CONTEXT_RESPONSE } from 'vs/workbench/contrib/csChat/common/csChatContextKeys';
+import { CONTEXT_CHAT_INPUT_CURSOR_AT_TOP, CONTEXT_IN_CHAT_INPUT, CONTEXT_IN_CHAT_SESSION, CONTEXT_PROVIDER_EXISTS, CONTEXT_REQUEST, CONTEXT_RESPONSE } from 'vs/workbench/contrib/csChat/common/csChatContextKeys';
+import { ICSChatContributionService } from 'vs/workbench/contrib/csChat/common/csChatContributionService';
 import { chatAgentLeader, chatFileVariableLeader } from 'vs/workbench/contrib/csChat/common/csChatParserTypes';
 import { ICSChatService, IChatDetail } from 'vs/workbench/contrib/csChat/common/csChatService';
 import { ICSChatWidgetHistoryService } from 'vs/workbench/contrib/csChat/common/csChatWidgetHistoryService';
@@ -42,11 +41,22 @@ import { LifecyclePhase } from 'vs/workbench/services/lifecycle/common/lifecycle
 export const CHAT_CATEGORY = { value: localize('chat.category', "Chat"), original: 'Chat' };
 export const CHAT_OPEN_ACTION_ID = 'workbench.action.csChat.open';
 
-class QuickChatGlobalAction extends Action2 {
+export interface IChatViewOpenOptions {
+	/**
+	 * The query for quick chat.
+	 */
+	query: string;
+	/**
+	 * Whether the query is partial and will await more input from the user.
+	 */
+	isPartialQuery?: boolean;
+}
+
+class OpenChatGlobalAction extends Action2 {
 	constructor() {
 		super({
 			id: CHAT_OPEN_ACTION_ID,
-			title: { value: localize('quickChat', "Quick Chat"), original: 'Quick Chat' },
+			title: localize2('openChat', "Open Chat"),
 			precondition: CONTEXT_PROVIDER_EXISTS,
 			icon: Codicon.commentDiscussion,
 			f1: false,
@@ -61,7 +71,8 @@ class QuickChatGlobalAction extends Action2 {
 		});
 	}
 
-	override async run(accessor: ServicesAccessor, query?: string): Promise<void> {
+	override async run(accessor: ServicesAccessor, opts?: string | IChatViewOpenOptions): Promise<void> {
+		opts = typeof opts === 'string' ? { query: opts } : opts;
 		const chatService = accessor.get(ICSChatService);
 		const chatWidgetService = accessor.get(ICSChatWidgetService);
 		const providers = chatService.getProviderInfos();
@@ -72,68 +83,78 @@ class QuickChatGlobalAction extends Action2 {
 		if (!chatWidget) {
 			return;
 		}
-		if (query) {
-			chatWidget.acceptInput(query);
+		if (opts?.query) {
+			if (opts.isPartialQuery) {
+				chatWidget.setInput(opts.query);
+			} else {
+				chatWidget.acceptInput(opts.query);
+			}
 		}
 		chatWidget.focusInput();
 	}
 }
 
+export class ChatSubmitSecondaryAgentEditorAction extends EditorAction2 {
+	static readonly ID = 'workbench.action.chat.submitSecondaryAgent';
+
+	constructor() {
+		super({
+			id: ChatSubmitSecondaryAgentEditorAction.ID,
+			title: localize2({ key: 'actions.chat.submitSecondaryAgent', comment: ['Send input from the chat input box to the secondary agent'] }, "Submit to Secondary Agent"),
+			precondition: CONTEXT_IN_CHAT_INPUT,
+			keybinding: {
+				when: EditorContextKeys.textInputFocus,
+				primary: KeyMod.CtrlCmd | KeyCode.Enter,
+				weight: KeybindingWeight.EditorContrib
+			}
+		});
+	}
+
+	runEditorCommand(accessor: ServicesAccessor, editor: ICodeEditor): void | Promise<void> {
+		const editorUri = editor.getModel()?.uri;
+		if (editorUri) {
+			const agentService = accessor.get(ICSChatAgentService);
+			const secondaryAgent = agentService.getSecondaryAgent();
+			if (!secondaryAgent) {
+				return;
+			}
+
+			const widgetService = accessor.get(ICSChatWidgetService);
+			widgetService.getWidgetByInputUri(editorUri)?.acceptInputWithPrefix(`${chatAgentLeader}${secondaryAgent.id}`);
+		}
+	}
+}
+
+export class ChatSubmitEditorAction extends EditorAction2 {
+	static readonly ID = 'workbench.action.chat.acceptInput';
+
+	constructor() {
+		super({
+			id: ChatSubmitEditorAction.ID,
+			title: localize2({ key: 'actions.chat.submit', comment: ['Apply input from the chat input box'] }, "Submit"),
+			precondition: CONTEXT_IN_CHAT_INPUT,
+			keybinding: {
+				when: EditorContextKeys.textInputFocus,
+				primary: KeyCode.Enter,
+				weight: KeybindingWeight.EditorContrib
+			}
+		});
+	}
+
+	runEditorCommand(accessor: ServicesAccessor, editor: ICodeEditor): void | Promise<void> {
+		const editorUri = editor.getModel()?.uri;
+		if (editorUri) {
+			const widgetService = accessor.get(ICSChatWidgetService);
+			widgetService.getWidgetByInputUri(editorUri)?.acceptInput();
+		}
+	}
+}
+
 export function registerChatActions() {
-	registerAction2(QuickChatGlobalAction);
-	registerEditorAction(class ChatAcceptInput extends EditorAction {
-		constructor() {
-			super({
-				id: 'csChat.action.acceptInput',
-				label: localize({ key: 'actions.chat.acceptInput', comment: ['Apply input from the chat input box'] }, "Accept Chat Input"),
-				alias: 'Accept Chat Input',
-				precondition: CONTEXT_IN_CHAT_INPUT,
-				kbOpts: {
-					kbExpr: EditorContextKeys.textInputFocus,
-					primary: KeyCode.Enter,
-					weight: KeybindingWeight.EditorContrib
-				}
-			});
-		}
+	registerAction2(OpenChatGlobalAction);
+	registerAction2(ChatSubmitEditorAction);
 
-		run(accessor: ServicesAccessor, editor: ICodeEditor): void | Promise<void> {
-			const editorUri = editor.getModel()?.uri;
-			if (editorUri) {
-				const widgetService = accessor.get(ICSChatWidgetService);
-				widgetService.getWidgetByInputUri(editorUri)?.acceptInput();
-			}
-		}
-	});
-
-	registerEditorAction(class ChatSubmitSecondaryAgent extends EditorAction {
-		constructor() {
-			super({
-				id: 'csChat.action.submitSecondaryAgent',
-				label: localize({ key: 'actions.chat.submitSecondaryAgent', comment: ['Send input from the chat input box to the secondary agent'] }, "Submit to Secondary Agent"),
-				alias: 'Submit to Secondary Agent',
-				precondition: CONTEXT_IN_CHAT_INPUT,
-				kbOpts: {
-					kbExpr: EditorContextKeys.textInputFocus,
-					primary: KeyMod.CtrlCmd | KeyCode.Enter,
-					weight: KeybindingWeight.EditorContrib
-				}
-			});
-		}
-
-		run(accessor: ServicesAccessor, editor: ICodeEditor): void | Promise<void> {
-			const editorUri = editor.getModel()?.uri;
-			if (editorUri) {
-				const agentService = accessor.get(ICSChatAgentService);
-				const secondaryAgent = agentService.getSecondaryAgent();
-				if (!secondaryAgent) {
-					return;
-				}
-
-				const widgetService = accessor.get(ICSChatWidgetService);
-				widgetService.getWidgetByInputUri(editorUri)?.acceptInputWithPrefix(`${chatAgentLeader}${secondaryAgent.id}`);
-			}
-		}
-	});
+	registerAction2(ChatSubmitSecondaryAgentEditorAction);
 
 	registerEditorAction(class ChatAddContext extends EditorAction {
 		constructor() {
@@ -193,18 +214,19 @@ export function registerChatActions() {
 					return;
 				}
 
-				chatWidget.getContrib<ChatDynamicReferenceModel>(ChatDynamicReferenceModel.ID)?.addReference({
-					range: { ...range, endColumn: range.endColumn + text.length },
-					data: {
-						uri: editorUri,
-						range: {
-							startLineNumber: selectedRange!.startLineNumber,
-							startColumn: selectedRange!.startColumn,
-							endLineNumber: selectedRange!.endLineNumber,
-							endColumn: selectedRange!.endColumn
-						}
-					}
-				});
+				// chatWidget.getContrib<ChatDynamicVariableModel>(ChatDynamicVariableModel.ID)?.addReference({
+				// 	range: { ...range, endColumn: range.endColumn + text.length },
+				// 	data: [{
+				// 		level: 'full',
+				// 		value: editorUri,
+				// 		range: {
+				// 			startLineNumber: selectedRange!.startLineNumber,
+				// 			startColumn: selectedRange!.startColumn,
+				// 			endLineNumber: selectedRange!.endLineNumber,
+				// 			endColumn: selectedRange!.endColumn
+				// 		}
+				// 	}]
+				// });
 
 				chatWidget.focusInput();
 			}
@@ -235,7 +257,7 @@ export function registerChatActions() {
 			super({
 				id: 'chat.action.focus',
 				title: { value: localize('actions.interactiveSession.focus', "Focus Chat List"), original: 'Focus Chat List' },
-				precondition: CONTEXT_IN_CHAT_INPUT,
+				precondition: ContextKeyExpr.and(CONTEXT_IN_CHAT_INPUT, CONTEXT_CHAT_INPUT_CURSOR_AT_TOP),
 				category: CHAT_CATEGORY,
 				keybinding: {
 					when: EditorContextKeys.textInputFocus,
@@ -280,7 +302,7 @@ export function registerChatActions() {
 				keybinding: {
 					primary: KeyMod.CtrlCmd | KeyCode.DownArrow,
 					weight: KeybindingWeight.WorkbenchContrib,
-					when: ContextKeyExpr.and(CONTEXT_IN_CHAT_SESSION, ContextKeyExpr.not(EditorContextKeys.focus.key))
+					when: ContextKeyExpr.and(CONTEXT_IN_CHAT_SESSION, CONTEXT_IN_CHAT_INPUT.negate())
 				}
 			});
 		}

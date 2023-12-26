@@ -4,14 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { CancellationToken } from 'vs/base/common/cancellation';
-import { Emitter } from 'vs/base/common/event';
 import { IMarkdownString } from 'vs/base/common/htmlContent';
 import { Iterable } from 'vs/base/common/iterator';
 import { toDisposable } from 'vs/base/common/lifecycle';
 import { IRelaxedExtensionDescription } from 'vs/platform/extensions/common/extensions';
 import { ExtHostCSChatShape, IChatDto, IMainContext, MainContext, MainThreadCSChatShape } from 'vs/workbench/api/common/extHost.protocol';
 import * as typeConvert from 'vs/workbench/api/common/extHostTypeConverters';
-import { ICSChatReplyFollowup, ICSChatUserActionEvent } from 'vs/workbench/contrib/csChat/common/csChatService';
+import { ICSChatReplyFollowup } from 'vs/workbench/contrib/csChat/common/csChatService';
 import type * as vscode from 'vscode';
 
 class ChatProviderWrapper<T> {
@@ -32,9 +31,6 @@ export class ExtHostCSChat implements ExtHostCSChatShape {
 	private readonly _chatProvider = new Map<number, ChatProviderWrapper<vscode.CSChatSessionProvider>>();
 
 	private readonly _chatSessions = new Map<number, vscode.CSChatSession>();
-
-	private readonly _onDidPerformUserAction = new Emitter<vscode.InteractiveSessionUserActionEvent>();
-	public readonly onDidPerformUserAction = this._onDidPerformUserAction.event;
 
 	private readonly _proxy: MainThreadCSChatShape;
 
@@ -138,10 +134,6 @@ export class ExtHostCSChat implements ExtHostCSChatShape {
 
 	$releaseSession(sessionId: number) {
 		this._chatSessions.delete(sessionId);
-	}
-
-	async $onDidPerformUserAction(event: ICSChatUserActionEvent): Promise<void> {
-		this._onDidPerformUserAction.fire(event as any);
 	}
 
 	//#endregion

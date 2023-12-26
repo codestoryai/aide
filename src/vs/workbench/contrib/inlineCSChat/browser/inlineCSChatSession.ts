@@ -7,8 +7,8 @@ import { URI } from 'vs/base/common/uri';
 import { Emitter, Event } from 'vs/base/common/event';
 import { ResourceEdit, ResourceFileEdit, ResourceTextEdit } from 'vs/editor/browser/services/bulkEditService';
 import { IWorkspaceTextEdit, TextEdit, WorkspaceEdit } from 'vs/editor/common/languages';
-import { IModelDeltaDecoration, ITextModel } from 'vs/editor/common/model';
-import { EditMode, IInlineCSChatSessionProvider, IInlineCSChatSession, IInlineCSChatResponse, IInlineCSChatService, InlineChateResponseTypes, InlineChatResponseType, IInlineCSChatBulkEditResponse, IInlineCSChatEditResponse, IInlineCSChatMessageResponse } from 'vs/workbench/contrib/inlineCSChat/common/inlineCSChat';
+import { IModelDecorationOptions, IModelDeltaDecoration, ITextModel } from 'vs/editor/common/model';
+import { EditMode, IInlineCSChatSessionProvider, IInlineCSChatSession, IInlineCSChatResponse, IInlineCSChatService, InlineChatResponseTypes, InlineChatResponseType, IInlineCSChatBulkEditResponse, IInlineCSChatEditResponse } from 'vs/workbench/contrib/inlineCSChat/common/inlineCSChat';
 import { IRange, Range } from 'vs/editor/common/core/range';
 import { IActiveCodeEditor, ICodeEditor } from 'vs/editor/browser/editorBrowser';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
@@ -16,7 +16,7 @@ import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IModelService } from 'vs/editor/common/services/model';
 import { ITextModelService } from 'vs/editor/common/services/resolverService';
 import { DisposableStore, IDisposable, toDisposable } from 'vs/base/common/lifecycle';
-import { createTextBufferFactoryFromSnapshot } from 'vs/editor/common/model/textModel';
+import { ModelDecorationOptions, createTextBufferFactoryFromSnapshot } from 'vs/editor/common/model/textModel';
 import { ILogService } from 'vs/platform/log/common/log';
 import { CancellationToken } from 'vs/base/common/cancellation';
 import { Iterable } from 'vs/base/common/iterator';
@@ -24,7 +24,7 @@ import { toErrorMessage } from 'vs/base/common/errorMessage';
 import { isCancellationError } from 'vs/base/common/errors';
 import { EditOperation, ISingleEditOperation } from 'vs/editor/common/core/editOperation';
 import { raceCancellation } from 'vs/base/common/async';
-import { LineRangeMapping } from 'vs/editor/common/diff/rangeMapping';
+import { DetailedLineRangeMapping, LineRangeMapping } from 'vs/editor/common/diff/rangeMapping';
 import { IMarkdownString } from 'vs/base/common/htmlContent';
 import { IUntitledTextEditorModel } from 'vs/workbench/services/untitled/common/untitledTextEditorModel';
 import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
@@ -71,12 +71,12 @@ export enum ExpansionState {
 
 class SessionWholeRange {
 
-	private static readonly _options = { description: 'inlineChat/session/wholeRange' };
+	private static readonly _options: IModelDecorationOptions = ModelDecorationOptions.register({ description: 'inlineChat/session/wholeRange' });
 
 	private readonly _onDidChange = new Emitter<this>();
 	readonly onDidChange: Event<this> = this._onDidChange.event;
 
-	private readonly _decorationIds: string[] = [];
+	private _decorationIds: string[] = [];
 
 	constructor(private readonly _textModel: ITextModel, wholeRange: IRange) {
 		this._decorationIds = _textModel.deltaDecorations([], [{ range: wholeRange, options: SessionWholeRange._options }]);
@@ -96,6 +96,27 @@ class SessionWholeRange {
 		}
 		this._decorationIds.push(...this._textModel.deltaDecorations([], newDeco));
 		this._onDidChange.fire(this);
+	}
+
+	fixup(changes: readonly DetailedLineRangeMapping[]): void {
+
+		const newDeco: IModelDeltaDecoration[] = [];
+		for (const { modified } of changes) {
+			const modifiedRange = modified.isEmpty
+				? new Range(modified.startLineNumber, 1, modified.startLineNumber, this._textModel.getLineLength(modified.startLineNumber))
+				: new Range(modified.startLineNumber, 1, modified.endLineNumberExclusive - 1, this._textModel.getLineLength(modified.endLineNumberExclusive - 1));
+
+			newDeco.push({ range: modifiedRange, options: SessionWholeRange._options });
+		}
+		const [first, ...rest] = this._decorationIds; // first is the original whole range
+		const newIds = this._textModel.deltaDecorations(rest, newDeco);
+		this._decorationIds = [first].concat(newIds);
+		this._onDidChange.fire(this);
+	}
+
+	get trackedInitialRange(): Range {
+		const [first] = this._decorationIds;
+		return this._textModel.getDecorationRange(first) ?? new Range(1, 1, 1, 1);
 	}
 
 	get value(): Range {
@@ -140,6 +161,7 @@ export class Session {
 			extension: provider.debugName,
 			startTime: this._startTime.toISOString(),
 			edits: false,
+			finishedByEdit: false,
 			rounds: '',
 			undos: '',
 			editMode
@@ -290,10 +312,10 @@ export class ReplyResponse {
 	readonly untitledTextModel: IUntitledTextEditorModel | undefined;
 	readonly workspaceEdit: WorkspaceEdit | undefined;
 
-	readonly responseType: InlineChateResponseTypes;
+	readonly responseType: InlineChatResponseTypes;
 
 	constructor(
-		readonly raw: IInlineCSChatBulkEditResponse | IInlineCSChatEditResponse | IInlineCSChatMessageResponse,
+		readonly raw: IInlineCSChatBulkEditResponse | IInlineCSChatEditResponse,
 		readonly mdContent: IMarkdownString,
 		localUri: URI,
 		readonly modelAltVersionId: number,
@@ -335,21 +357,20 @@ export class ReplyResponse {
 			}
 		}
 
-		if (editsMap.size === 0) {
-			this.responseType = InlineChateResponseTypes.OnlyMessages;
-		} else if (editsMap.size === 1 && editsMap.has(localUri)) {
-			this.responseType = InlineChateResponseTypes.OnlyEdits;
-		} else {
-			this.responseType = InlineChateResponseTypes.Mixed;
-		}
-
 		let needsWorkspaceEdit = false;
 
 		for (const [uri, edits] of editsMap) {
 
-			needsWorkspaceEdit = needsWorkspaceEdit || (uri.scheme !== Schemas.untitled && !isEqual(uri, localUri));
+			const flatEdits = edits.flat();
+			if (flatEdits.length === 0) {
+				editsMap.delete(uri);
+				continue;
+			}
 
-			if (uri.scheme === Schemas.untitled && !this.untitledTextModel) { //TODO@jrieken the first untitled model WINS
+			const isLocalUri = isEqual(uri, localUri);
+			needsWorkspaceEdit = needsWorkspaceEdit || (uri.scheme !== Schemas.untitled && !isLocalUri);
+
+			if (uri.scheme === Schemas.untitled && !isLocalUri && !this.untitledTextModel) { //TODO@jrieken the first untitled model WINS
 				const langSelection = this._languageService.createByFilepathOrFirstLine(uri, undefined);
 				const untitledTextModel = this._textFileService.untitled.create({
 					associatedResource: uri,
@@ -359,7 +380,7 @@ export class ReplyResponse {
 
 				untitledTextModel.resolve().then(async () => {
 					const model = untitledTextModel.textEditorModel!;
-					model.applyEdits(edits.flat().map(edit => EditOperation.replace(Range.lift(edit.range), edit.text)));
+					model.applyEdits(flatEdits.map(edit => EditOperation.replace(Range.lift(edit.range), edit.text)));
 				});
 			}
 		}
@@ -374,6 +395,19 @@ export class ReplyResponse {
 				}
 			}
 			this.workspaceEdit = { edits: workspaceEdits };
+		}
+
+
+		const hasEdits = editsMap.size > 0;
+		const hasMessage = mdContent.value.length > 0;
+		if (hasEdits && hasMessage) {
+			this.responseType = InlineChatResponseTypes.Mixed;
+		} else if (hasEdits) {
+			this.responseType = InlineChatResponseTypes.OnlyEdits;
+		} else if (hasMessage) {
+			this.responseType = InlineChatResponseTypes.OnlyMessages;
+		} else {
+			this.responseType = InlineChatResponseTypes.Empty;
 		}
 	}
 }
@@ -489,8 +523,6 @@ export class InlineChatSessionService implements IInlineChatSessionService {
 			wholeRange = raw.wholeRange ? Range.lift(raw.wholeRange) : editor.getSelection();
 		}
 
-		// expand to whole lines
-		wholeRange = new Range(wholeRange.startLineNumber, 1, wholeRange.endLineNumber, textModel.getLineMaxColumn(wholeRange.endLineNumber));
 
 		// install managed-marker for the decoration range
 		const wholeRangeMgr = new SessionWholeRange(textModel, wholeRange);

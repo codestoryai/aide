@@ -11,7 +11,7 @@ import * as htmlContent from 'vs/base/common/htmlContent';
 import { DisposableStore } from 'vs/base/common/lifecycle';
 import { ResourceMap, ResourceSet } from 'vs/base/common/map';
 import { marked } from 'vs/base/common/marked/marked';
-import { parse } from 'vs/base/common/marshalling';
+import { parse, revive } from 'vs/base/common/marshalling';
 import { Mimes } from 'vs/base/common/mime';
 import { cloneAndChange } from 'vs/base/common/objects';
 import { isEmptyObject, isNumber, isString, isUndefinedOrNull } from 'vs/base/common/types';
@@ -1025,6 +1025,19 @@ export namespace DocumentHighlight {
 	}
 }
 
+export namespace MultiDocumentHighlight {
+	export function from(multiDocumentHighlight: vscode.MultiDocumentHighlight): languages.MultiDocumentHighlight {
+		return {
+			uri: multiDocumentHighlight.uri,
+			highlights: multiDocumentHighlight.highlights.map(DocumentHighlight.from)
+		};
+	}
+
+	export function to(multiDocumentHighlight: languages.MultiDocumentHighlight): types.MultiDocumentHighlight {
+		return new types.MultiDocumentHighlight(URI.revive(multiDocumentHighlight.uri), multiDocumentHighlight.highlights.map(DocumentHighlight.to));
+	}
+}
+
 export namespace CompletionTriggerKind {
 	export function to(kind: languages.CompletionTriggerKind) {
 		switch (kind) {
@@ -1970,14 +1983,14 @@ export namespace TestResults {
 
 export namespace TestCoverage {
 	function fromCoveredCount(count: vscode.CoveredCount): ICoveredCount {
-		return { covered: count.covered, total: count.covered };
+		return { covered: count.covered, total: count.total };
 	}
 
 	function fromLocation(location: vscode.Range | vscode.Position) {
 		return 'line' in location ? Position.from(location) : Range.from(location);
 	}
 
-	export function fromDetailed(coverage: vscode.DetailedCoverage): CoverageDetails {
+	export function fromDetailed(coverage: vscode.DetailedCoverage): CoverageDetails.Serialized {
 		if ('branches' in coverage) {
 			return {
 				count: coverage.executionCount,
@@ -1990,13 +2003,14 @@ export namespace TestCoverage {
 		} else {
 			return {
 				type: DetailType.Function,
+				name: coverage.name,
 				count: coverage.executionCount,
 				location: fromLocation(coverage.location),
 			};
 		}
 	}
 
-	export function fromFile(coverage: vscode.FileCoverage): IFileCoverage {
+	export function fromFile(coverage: vscode.FileCoverage): IFileCoverage.Serialized {
 		return {
 			uri: coverage.uri,
 			statement: fromCoveredCount(coverage.statementCoverage),
@@ -2281,7 +2295,8 @@ export namespace ChatVariable {
 	export function to(variable: IChatRequestVariableValue): vscode.ChatVariableValue {
 		return {
 			level: ChatVariableLevel.to(variable.level),
-			value: variable.value,
+			kind: variable.kind,
+			value: revive(variable.value),
 			description: variable.description
 		};
 	}
@@ -2289,6 +2304,7 @@ export namespace ChatVariable {
 	export function from(variable: vscode.ChatVariableValue): IChatRequestVariableValue {
 		return {
 			level: ChatVariableLevel.from(variable.level),
+			kind: variable.kind,
 			value: variable.value,
 			description: variable.description
 		};
@@ -2296,19 +2312,17 @@ export namespace ChatVariable {
 }
 
 type IChatDynamicRequestVariable = { uri: string; range: editorRange.IRange };
-const isDynamicChatRequestVariable = (v: any): v is IChatDynamicRequestVariable => {
-	const value = JSON.parse(v);
+const isDynamicChatRequestVariable = (value: any): value is IChatDynamicRequestVariable => {
 	return value && typeof value.uri === 'string' && editorRange.Range.isIRange(value.range);
 };
 
 export namespace CSChatVariable {
 	export function to(variable: IChatRequestVariableValue): vscode.CSChatVariableValue {
-		const value = variable.value;
+		const value = JSON.parse(variable.value);
 		if (isDynamicChatRequestVariable(value)) {
-			const parsedValue: IChatDynamicRequestVariable = JSON.parse(value);
 			const dynamicRequestVariable: vscode.CSChatDynamicVariableValue = {
-				uri: URI.parse(parsedValue.uri),
-				range: parsedValue.range
+				uri: URI.parse(value.uri),
+				range: value.range
 			};
 
 			return {
@@ -2393,9 +2407,9 @@ export namespace ChatResponseProgress {
 			checkProposedApiEnabled(extension, 'chatAgents2Additions');
 			return { content: MarkdownString.from(progress.markdownContent), kind: 'markdownContent' };
 		} else if ('content' in progress) {
-			if ('vulnerability' in progress && progress.vulnerability) {
+			if ('vulnerabilities' in progress && progress.vulnerabilities) {
 				checkProposedApiEnabled(extension, 'chatAgents2Additions');
-				return { content: progress.content, title: progress.vulnerability.title, description: progress.vulnerability!.description, kind: 'vulnerability' };
+				return { content: progress.content, vulnerabilities: progress.vulnerabilities, kind: 'vulnerability' };
 			}
 
 			if (typeof progress.content === 'string') {
@@ -2442,6 +2456,18 @@ export namespace ChatResponseProgress {
 		} else {
 			return undefined;
 		}
+	}
+}
+
+export namespace ChatAgentCompletionItem {
+	export function from(item: vscode.ChatAgentCompletionItem): extHostProtocol.IChatAgentCompletionItem {
+		return {
+			label: item.label,
+			values: item.values.map(ChatVariable.from),
+			insertText: item.insertText,
+			detail: item.detail,
+			documentation: item.documentation,
+		};
 	}
 }
 

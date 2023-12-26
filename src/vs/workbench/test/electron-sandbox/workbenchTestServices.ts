@@ -65,8 +65,8 @@ export class TestNativeHostService implements INativeHostService {
 	readonly windowId = -1;
 
 	onDidOpenMainWindow: Event<number> = Event.None;
-	onDidMaximizeMainWindow: Event<number> = Event.None;
-	onDidUnmaximizeMainWindow: Event<number> = Event.None;
+	onDidMaximizeWindow: Event<number> = Event.None;
+	onDidUnmaximizeWindow: Event<number> = Event.None;
 	onDidFocusMainWindow: Event<number> = Event.None;
 	onDidBlurMainWindow: Event<number> = Event.None;
 	onDidFocusMainOrAuxiliaryWindow: Event<number> = Event.None;
@@ -74,7 +74,8 @@ export class TestNativeHostService implements INativeHostService {
 	onDidResumeOS: Event<unknown> = Event.None;
 	onDidChangeColorScheme = Event.None;
 	onDidChangePassword = Event.None;
-	onDidTriggerMainWindowSystemContextMenu: Event<{ windowId: number; x: number; y: number }> = Event.None;
+	onDidTriggerWindowSystemContextMenu: Event<{ windowId: number; x: number; y: number }> = Event.None;
+	onDidChangeWindowFullScreen = Event.None;
 	onDidChangeDisplay = Event.None;
 
 	windowCount = Promise.resolve(1);
@@ -136,7 +137,6 @@ export class TestNativeHostService implements INativeHostService {
 	async relaunch(options?: { addArgs?: string[] | undefined; removeArgs?: string[] | undefined } | undefined): Promise<void> { }
 	async reload(): Promise<void> { }
 	async closeWindow(): Promise<void> { }
-	async closeWindowById(): Promise<void> { }
 	async quit(): Promise<void> { }
 	async exit(code: number): Promise<void> { }
 	async openDevTools(options?: Electron.OpenDevToolsOptions | undefined): Promise<void> { }

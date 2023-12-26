@@ -10,7 +10,7 @@ import { basenameOrAuthority, dirname } from 'vs/base/common/resources';
 import { ICodeEditorService } from 'vs/editor/browser/services/codeEditorService';
 import { Position } from 'vs/editor/common/core/position';
 import { Range } from 'vs/editor/common/core/range';
-import { getWordAtText } from 'vs/editor/common/core/wordHelper';
+import { IWordAtPosition, getWordAtText } from 'vs/editor/common/core/wordHelper';
 import { IDecorationOptions } from 'vs/editor/common/editorCommon';
 import { CompletionContext, CompletionItem, CompletionItemKind, CompletionList } from 'vs/editor/common/languages';
 import { ITextModel } from 'vs/editor/common/model';
@@ -25,15 +25,15 @@ import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace
 import { IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions } from 'vs/workbench/common/contributions';
 import { ICSChatSlashCommandService } from 'vs/workbench/contrib/csChat/common/csChatSlashCommands';
 import { SubmitAction } from 'vs/workbench/contrib/csChat/browser/actions/csChatExecuteActions';
-import { SelectAndInsertCodeSymbolAction, SelectAndInsertFileAction, dynamicReferenceDecorationType } from 'vs/workbench/contrib/csChat/browser/contrib/csChatDynamicReferences';
+import { SelectAndInsertCodeSymbolAction, SelectAndInsertFileAction, dynamicVariableDecorationType } from 'vs/workbench/contrib/csChat/browser/contrib/csChatDynamicVariables';
 import { ICSChatWidgetService, IChatWidget } from 'vs/workbench/contrib/csChat/browser/csChat';
 import { ChatInputPart } from 'vs/workbench/contrib/csChat/browser/csChatInputPart';
 import { ChatWidget } from 'vs/workbench/contrib/csChat/browser/csChatWidget';
 import { ICSChatAgentService, ICSChatAgentCommand, IChatAgentData } from 'vs/workbench/contrib/csChat/common/csChatAgents';
 import { chatSlashCommandBackground, chatSlashCommandForeground } from 'vs/workbench/contrib/csChat/common/csChatColors';
-import { ChatRequestAgentPart, ChatRequestAgentSubcommandPart, ChatRequestSlashCommandPart, ChatRequestTextPart, ChatRequestVariablePart, chatAgentLeader, chatFileVariableLeader, chatSubcommandLeader, chatSymbolVariableLeader, chatVariableLeader } from 'vs/workbench/contrib/csChat/common/csChatParserTypes';
+import { ChatRequestAgentPart, ChatRequestAgentSubcommandPart, ChatRequestSlashCommandPart, ChatRequestTextPart, ChatRequestVariablePart, IParsedChatRequestPart, chatAgentLeader, chatFileVariableLeader, chatSubcommandLeader, chatSymbolVariableLeader, chatVariableLeader } from 'vs/workbench/contrib/csChat/common/csChatParserTypes';
 import { ChatRequestParser } from 'vs/workbench/contrib/csChat/common/csChatRequestParser';
-import { ICSChatService, ISlashCommand } from 'vs/workbench/contrib/csChat/common/csChatService';
+import { ICSChatService } from 'vs/workbench/contrib/csChat/common/csChatService';
 import { ICSChatVariablesService } from 'vs/workbench/contrib/csChat/common/csChatVariables';
 import { isResponseVM } from 'vs/workbench/contrib/csChat/common/csChatViewModel';
 import { SymbolsQuickAccessProvider } from 'vs/workbench/contrib/search/browser/symbolsQuickAccess';
@@ -100,7 +100,7 @@ class InputEditorDecorations extends Disposable {
 
 	private updateRegisteredDecorationTypes() {
 		this.codeEditorService.removeDecorationType(variableTextDecorationType);
-		this.codeEditorService.removeDecorationType(dynamicReferenceDecorationType);
+		this.codeEditorService.removeDecorationType(dynamicVariableDecorationType);
 		this.codeEditorService.removeDecorationType(slashCommandTextDecorationType);
 		this.codeEditorService.removeDecorationType(agentTextDecorationType);
 
@@ -118,7 +118,7 @@ class InputEditorDecorations extends Disposable {
 			backgroundColor: theme.getColor(chatSlashCommandBackground)?.toString(),
 			borderRadius: '3px'
 		});
-		this.codeEditorService.registerDecorationType(decorationDescription, dynamicReferenceDecorationType, {
+		this.codeEditorService.registerDecorationType(decorationDescription, dynamicVariableDecorationType, {
 			color: theme.getColor(chatSlashCommandForeground)?.toString(),
 			backgroundColor: theme.getColor(chatSlashCommandBackground)?.toString(),
 			borderRadius: '3px'
@@ -170,15 +170,25 @@ class InputEditorDecorations extends Disposable {
 		const agentSubcommandPart = parsedRequest.find((p): p is ChatRequestAgentSubcommandPart => p instanceof ChatRequestAgentSubcommandPart);
 		const slashCommandPart = parsedRequest.find((p): p is ChatRequestSlashCommandPart => p instanceof ChatRequestSlashCommandPart);
 
+		const exactlyOneSpaceAfterPart = (part: IParsedChatRequestPart): boolean => {
+			const partIdx = parsedRequest.indexOf(part);
+			if (parsedRequest.length > partIdx + 2) {
+				return false;
+			}
+
+			const nextPart = parsedRequest[partIdx + 1];
+			return nextPart && nextPart instanceof ChatRequestTextPart && nextPart.text === ' ';
+		};
+
 		const onlyAgentAndWhitespace = agentPart && parsedRequest.every(p => p instanceof ChatRequestTextPart && !p.text.trim().length || p instanceof ChatRequestAgentPart);
 		if (onlyAgentAndWhitespace) {
 			// Agent reference with no other text - show the placeholder
-			if (agentPart.agent.metadata.description) {
+			if (agentPart.agent.metadata.description && exactlyOneSpaceAfterPart(agentPart)) {
 				placeholderDecoration = [{
 					range: {
-						startLineNumber: 1,
-						endLineNumber: 1,
-						startColumn: inputValue.length,
+						startLineNumber: agentPart.editorRange.startLineNumber,
+						endLineNumber: agentPart.editorRange.endLineNumber,
+						startColumn: agentPart.editorRange.endColumn + 1,
 						endColumn: 1000
 					},
 					renderOptions: {
@@ -196,12 +206,12 @@ class InputEditorDecorations extends Disposable {
 			// Agent reference and subcommand with no other text - show the placeholder
 			const isFollowupSlashCommand = this.previouslyUsedAgents.has(agentAndCommandToKey(agentPart.agent.id, agentSubcommandPart.command.name));
 			const shouldRenderFollowupPlaceholder = isFollowupSlashCommand && agentSubcommandPart.command.followupPlaceholder;
-			if (agentSubcommandPart?.command.description) {
+			if (agentSubcommandPart?.command.description && exactlyOneSpaceAfterPart(agentSubcommandPart)) {
 				placeholderDecoration = [{
 					range: {
-						startLineNumber: 1,
-						endLineNumber: 1,
-						startColumn: inputValue.length,
+						startLineNumber: agentSubcommandPart.editorRange.startLineNumber,
+						endLineNumber: agentSubcommandPart.editorRange.endLineNumber,
+						startColumn: agentSubcommandPart.editorRange.endColumn + 1,
 						endColumn: 1000
 					},
 					renderOptions: {
@@ -217,19 +227,17 @@ class InputEditorDecorations extends Disposable {
 		const onlySlashCommandAndWhitespace = slashCommandPart && parsedRequest.every(p => p instanceof ChatRequestTextPart && !p.text.trim().length || p instanceof ChatRequestSlashCommandPart);
 		if (onlySlashCommandAndWhitespace) {
 			// Command reference with no other text - show the placeholder
-			const isFollowupSlashCommand = this.previouslyUsedAgents.has(slashCommandPart.slashCommand.command);
-			const shouldRenderFollowupPlaceholder = isFollowupSlashCommand && slashCommandPart.slashCommand.followupPlaceholder;
-			if (shouldRenderFollowupPlaceholder || slashCommandPart.slashCommand.detail) {
+			if (slashCommandPart.slashCommand.detail && exactlyOneSpaceAfterPart(slashCommandPart)) {
 				placeholderDecoration = [{
 					range: {
-						startLineNumber: 1,
-						endLineNumber: 1,
-						startColumn: inputValue.length,
+						startLineNumber: slashCommandPart.editorRange.startLineNumber,
+						endLineNumber: slashCommandPart.editorRange.endLineNumber,
+						startColumn: slashCommandPart.editorRange.endColumn + 1,
 						endColumn: 1000
 					},
 					renderOptions: {
 						after: {
-							contentText: shouldRenderFollowupPlaceholder ? slashCommandPart.slashCommand.followupPlaceholder : slashCommandPart.slashCommand.detail,
+							contentText: slashCommandPart.slashCommand.detail,
 							color: this.getPlaceholderColor(),
 						}
 					}
@@ -305,14 +313,15 @@ class SlashCommandCompletions extends Disposable {
 		this._register(this.languageFeaturesService.completionProvider.register({ scheme: ChatInputPart.INPUT_SCHEME, hasAccessToAllModels: true }, {
 			_debugDisplayName: 'globalSlashCommands',
 			triggerCharacters: ['/'],
-			provideCompletionItems: async (model: ITextModel, _position: Position, _context: CompletionContext, _token: CancellationToken) => {
+			provideCompletionItems: async (model: ITextModel, position: Position, _context: CompletionContext, _token: CancellationToken) => {
 				const widget = this.chatWidgetService.getWidgetByInputUri(model.uri);
 				if (!widget || !widget.viewModel) {
 					return null;
 				}
 
-				if (!model.getValue().trim().match(/\/\w*/)) {
-					return;
+				const range = computeCompletionRanges(model, position, /\/\w*/g);
+				if (!range) {
+					return null;
 				}
 
 				const parsedRequest = (await this.instantiationService.createInstance(ChatRequestParser).parseChatRequest(widget.viewModel.sessionId, model.getValue())).parts;
@@ -328,7 +337,7 @@ class SlashCommandCompletions extends Disposable {
 				}
 
 				return <CompletionList>{
-					suggestions: sortSlashCommandsByYieldTo<ISlashCommand>(slashCommands).map((c, i) => {
+					suggestions: slashCommands.map((c, i) => {
 						const withSlash = `/${c.command}`;
 						return <CompletionItem>{
 							label: withSlash,
@@ -364,11 +373,6 @@ class AgentCompletions extends Disposable {
 				const widget = this.chatWidgetService.getWidgetByInputUri(model.uri);
 				if (!widget || !widget.viewModel) {
 					return null;
-				}
-
-				if (!model.getValue().trim().match(new RegExp(`^${chatAgentLeader}\\w*$`))) {
-					// Only when the input only contains the start of an agent
-					return;
 				}
 
 				const parsedRequest = (await this.instantiationService.createInstance(ChatRequestParser).parseChatRequest(widget.viewModel.sessionId, model.getValue())).parts;
@@ -462,9 +466,9 @@ class AgentCompletions extends Disposable {
 					return;
 				}
 
-				if (!model.getValue().trim().match(new RegExp(`^${chatSubcommandLeader}\\w*$`))) {
-					// Only when the input only contains the start of a slash command
-					return;
+				const range = computeCompletionRanges(model, position, /\/\w*/g);
+				if (!range) {
+					return null;
 				}
 
 				const agents = this.chatAgentService.getAgents();
@@ -475,23 +479,42 @@ class AgentCompletions extends Disposable {
 					return;
 				}
 
-				return <CompletionList>{
-					suggestions: agents.flatMap((agent, i) => commands[i].map((c, i) => {
+				const justAgents: CompletionItem[] = agents
+					.filter(a => !a.metadata.isDefault)
+					.map(agent => {
 						const agentLabel = `${chatAgentLeader}${agent.id}`;
-						const withSlash = `/${c.name}`;
-						return <CompletionItem>{
-							label: { label: withSlash, description: '' },
-							insertText: `${agentLabel} ${withSlash} `,
-							detail: `(${agentLabel}) ${c.description}`,
+						return {
+							label: { label: agentLabel, description: agent.metadata.description },
+							filterText: `${chatSubcommandLeader}${agent.id}`,
+							insertText: `${agentLabel} `,
 							range: new Range(1, 1, 1, 1),
-							kind: CompletionItemKind.Text, // The icons are disabled here anyway
+							kind: CompletionItemKind.Text,
+							sortText: `${chatSubcommandLeader}${agent.id}`,
 						};
-					}))
+					});
+
+				return {
+					suggestions: justAgents.concat(
+						agents.flatMap((agent, i) => commands[i].map((c, i) => {
+							const agentLabel = `${chatAgentLeader}${agent.id}`;
+							const withSlash = `${chatSubcommandLeader}${c.name}`;
+							return {
+								label: { label: withSlash, description: agentLabel },
+								filterText: `${chatSubcommandLeader}${agent.id}${c.name}`,
+								commitCharacters: [' '],
+								insertText: `${agentLabel} ${withSlash} `,
+								detail: `(${agentLabel}) ${c.description}`,
+								range: new Range(1, 1, 1, 1),
+								kind: CompletionItemKind.Text, // The icons are disabled here anyway
+								sortText: `${chatSubcommandLeader}${agent.id}${c.name}`,
+							} satisfies CompletionItem;
+						})))
 				};
 			}
 		}));
 	}
 }
+Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench).registerWorkbenchContribution(AgentCompletions, LifecyclePhase.Eventually);
 
 class BuiltinDynamicCompletions extends Disposable {
 	private static readonly VariableNameDef = new RegExp(`${chatFileVariableLeader}\\w*`, 'g'); // MUST be using `g`-flag
@@ -517,15 +540,14 @@ class BuiltinDynamicCompletions extends Disposable {
 					return null;
 				}
 
-				const varWord = getWordAtText(position.column, BuiltinDynamicCompletions.VariableNameDef, model.getLineContent(position.lineNumber), 0);
-				if (!varWord && model.getWordUntilPosition(position).word) {
-					// inside a "normal" word
+				const range = computeCompletionRanges(model, position, BuiltinDynamicCompletions.VariableNameDef);
+				if (!range) {
 					return null;
 				}
 
 				const files = await this.doGetFileSearchResults(_token);
-				const insertAndReplaceRange = new Range(position.lineNumber, position.column, position.lineNumber, position.column);
-				const range = new Range(position.lineNumber, position.column - (varWord ? varWord.word.length : 0), position.lineNumber, position.column);
+				// const insertAndReplaceRange = new Range(position.lineNumber, position.column, position.lineNumber, position.column);
+				const afterRange = new Range(position.lineNumber, range.replace.startColumn, position.lineNumber, range.replace.endColumn + 'file:'.length);
 
 				// Map the file list to completion items
 				const completionURIs = files.results.map(result => result.resource);
@@ -535,9 +557,9 @@ class BuiltinDynamicCompletions extends Disposable {
 						label: basenameOrAuthority(uri),
 						insertText: '',
 						detail,
-						range: { insert: insertAndReplaceRange, replace: insertAndReplaceRange },
+						range,
 						kind: CompletionItemKind.File,
-						command: { id: SelectAndInsertFileAction.ID, title: SelectAndInsertFileAction.ID, arguments: [{ widget, range, uri }] },
+						command: { id: SelectAndInsertFileAction.ID, title: SelectAndInsertFileAction.ID, arguments: [{ widget, range: afterRange, uri }] },
 						sortText: 'z'
 					};
 				});
@@ -619,82 +641,7 @@ class BuiltinSymbolCompletions extends Disposable {
 
 Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench).registerWorkbenchContribution(BuiltinSymbolCompletions, LifecyclePhase.Eventually);
 
-interface SlashCommandYieldTo {
-	command: string;
-}
-
-// Adapted from https://github.com/microsoft/vscode/blob/ca2c1636f87ea4705f32345c2e348e815996e129/src/vs/editor/contrib/dropOrPasteInto/browser/edit.ts#L31-L99
-function sortSlashCommandsByYieldTo<T extends {
-	readonly command: string;
-	readonly yieldsTo?: ReadonlyArray<SlashCommandYieldTo>;
-}>(slashCommands: readonly T[]): T[] {
-	function yieldsTo(yTo: SlashCommandYieldTo, other: T): boolean {
-		return 'command' in yTo && other.command === yTo.command;
-	}
-
-	// Build list of nodes each node yields to
-	const yieldsToMap = new Map<T, T[]>();
-	for (const slashCommand of slashCommands) {
-		for (const yTo of slashCommand.yieldsTo ?? []) {
-			for (const other of slashCommands) {
-				if (other.command === slashCommand.command) {
-					continue;
-				}
-
-				if (yieldsTo(yTo, other)) {
-					let arr = yieldsToMap.get(slashCommand);
-					if (!arr) {
-						arr = [];
-						yieldsToMap.set(slashCommand, arr);
-					}
-					arr.push(other);
-				}
-			}
-		}
-	}
-
-	if (!yieldsToMap.size) {
-		return Array.from(slashCommands);
-	}
-
-	// Topological sort
-	const visited = new Set<T>();
-	const tempStack: T[] = [];
-
-	function visit(nodes: T[]): T[] {
-		if (!nodes.length) {
-			return [];
-		}
-
-		const node = nodes[0];
-		if (tempStack.includes(node)) {
-			console.warn(`Yield to cycle detected for ${node.command}`);
-			return nodes;
-		}
-
-		if (visited.has(node)) {
-			return visit(nodes.slice(1));
-		}
-
-		let pre: T[] = [];
-		const yTo = yieldsToMap.get(node);
-		if (yTo) {
-			tempStack.push(node);
-			pre = visit(yTo);
-			tempStack.pop();
-		}
-
-		visited.add(node);
-
-		return [...pre, node, ...visit(nodes.slice(1))];
-	}
-
-	return visit(Array.from(slashCommands));
-}
-
-Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench).registerWorkbenchContribution(AgentCompletions, LifecyclePhase.Eventually);
-
-export function computeCompletionRanges(model: ITextModel, position: Position, reg: RegExp): { insert: Range; replace: Range } | undefined {
+function computeCompletionRanges(model: ITextModel, position: Position, reg: RegExp): { insert: Range; replace: Range; varWord: IWordAtPosition | null } | undefined {
 	const varWord = getWordAtText(position.column, reg, model.getLineContent(position.lineNumber), 0);
 	if (!varWord && model.getWordUntilPosition(position).word) {
 		// inside a "normal" word
@@ -710,7 +657,7 @@ export function computeCompletionRanges(model: ITextModel, position: Position, r
 		replace = new Range(position.lineNumber, varWord.startColumn, position.lineNumber, varWord.endColumn);
 	}
 
-	return { insert, replace };
+	return { insert, replace, varWord };
 }
 
 class VariableCompletions extends Disposable {

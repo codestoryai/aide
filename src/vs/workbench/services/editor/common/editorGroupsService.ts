@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { Event } from 'vs/base/common/event';
-import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
+import { IInstantiationService, createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import { IEditorPane, GroupIdentifier, EditorInputWithOptions, CloseDirection, IEditorPartOptions, IEditorPartOptionsChangeEvent, EditorsOrder, IVisibleEditorPane, IEditorCloseEvent, IUntypedEditorInput, isEditorInput, IEditorWillMoveEvent, IEditorWillOpenEvent, IMatchEditorOptions, IActiveEditorChangeEvent, IFindEditorOptions, IToolbarActions } from 'vs/workbench/common/editor';
 import { EditorInput } from 'vs/workbench/common/editor/editorInput';
 import { IEditorOptions } from 'vs/platform/editor/common/editor';
@@ -449,6 +449,11 @@ export interface IEditorPart extends IEditorGroupsContainer {
 	readonly hasRestorableState: boolean;
 
 	/**
+	 * Find out if an editor group is currently maximized.
+	 */
+	hasMaximizedGroup(): boolean;
+
+	/**
 	 * Enable or disable centered editor layout.
 	 */
 	centerLayout(active: boolean): void;
@@ -478,6 +483,12 @@ export interface IAuxiliaryEditorPart extends IEditorPart {
 	close(): void;
 }
 
+export interface IAuxiliaryEditorPartCreateEvent {
+	readonly part: IAuxiliaryEditorPart;
+	readonly instantiationService: IInstantiationService;
+	readonly disposables: DisposableStore;
+}
+
 /**
  * The main service to interact with editor groups across all opened editor parts.
  */
@@ -488,7 +499,7 @@ export interface IEditorGroupsService extends IEditorGroupsContainer {
 	/**
 	 * An event for when a new auxiliary editor part is created.
 	 */
-	readonly onDidCreateAuxiliaryEditorPart: Event<{ readonly part: IAuxiliaryEditorPart; readonly disposables: DisposableStore }>;
+	readonly onDidCreateAuxiliaryEditorPart: Event<IAuxiliaryEditorPartCreateEvent>;
 
 	/**
 	 * Provides access to the currently active editor part.

@@ -20,7 +20,7 @@ import { Registry } from 'vs/platform/registry/common/platform';
 import { IWorkspaceContextService } from 'vs/platform/workspace/common/workspace';
 import { IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions } from 'vs/workbench/common/contributions';
 import { chatFileVariableLeader, chatSymbolVariableLeader } from 'vs/workbench/contrib/csChat/common/csChatParserTypes';
-import { SelectAndInsertCodeSymbolAction, SelectAndInsertFileAction, isInsertFileVariableContext, isInsertSymbolVariableContext } from 'vs/workbench/contrib/inlineCSChat/browser/contrib/inlineCSChatDynamicReferences';
+import { SelectAndInsertCodeSymbolAction, SelectAndInsertFileAction, isInsertFileVariableContext, isInsertSymbolVariableContext } from 'vs/workbench/contrib/inlineCSChat/browser/contrib/inlineCSChatDynamicVariables';
 import { InlineChatController } from 'vs/workbench/contrib/inlineCSChat/browser/inlineCSChatController';
 import { InlineChatWidget } from 'vs/workbench/contrib/inlineCSChat/browser/inlineCSChatWidget';
 import { SymbolsQuickAccessProvider } from 'vs/workbench/contrib/search/browser/symbolsQuickAccess';

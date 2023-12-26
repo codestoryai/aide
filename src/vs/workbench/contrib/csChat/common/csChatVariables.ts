@@ -5,6 +5,7 @@
 
 import { CancellationToken } from 'vs/base/common/cancellation';
 import { IDisposable } from 'vs/base/common/lifecycle';
+import { URI } from 'vs/base/common/uri';
 import { IRange } from 'vs/editor/common/core/range';
 import { Location } from 'vs/editor/common/languages';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
@@ -20,7 +21,8 @@ export interface ICSChatVariableData {
 
 export interface ICSChatRequestVariableValue {
 	level: 'short' | 'medium' | 'full';
-	value: string;
+	kind?: string;
+	value: string | URI | Location | any;
 	description?: string;
 }
 
@@ -36,7 +38,7 @@ export interface ICSChatVariablesService {
 	registerVariable(data: ICSChatVariableData, resolver: IChatVariableResolver): IDisposable;
 	hasVariable(name: string): boolean;
 	getVariables(): Iterable<Readonly<ICSChatVariableData>>;
-	getDynamicReferences(sessionId: string): ReadonlyArray<IDynamicReference>; // should be its own service?
+	getDynamicVariables(sessionId: string): ReadonlyArray<IDynamicVariable>; // should be its own service?
 
 	/**
 	 * Resolves all variables that occur in `prompt`
@@ -56,7 +58,7 @@ export interface IInlineCSChatVariablesService {
 	registerVariable(data: ICSChatVariableData, resolver: IInlineChatVariableResolver): IDisposable;
 	hasVariable(name: string): boolean;
 	getVariables(): Iterable<Readonly<ICSChatVariableData>>;
-	getDynamicReferences(sessionId: string): ReadonlyArray<IDynamicReference>; // should be its own service?
+	getDynamicVariables(sessionId: string): ReadonlyArray<IDynamicVariable>; // should be its own service?
 
 	/**
 	 * Resolves all variables that occur in `prompt`
@@ -69,8 +71,7 @@ export interface IChatVariableResolveResult {
 	prompt: string;
 }
 
-export interface IDynamicReference {
+export interface IDynamicVariable {
 	range: IRange;
-	// data: any; // File details for a file, something else for a different type of thing, is it typed?
-	data: Location;
+	data: ICSChatRequestVariableValue[];
 }

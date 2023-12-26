@@ -8,6 +8,11 @@ import { createDecorator } from 'vs/platform/instantiation/common/instantiation'
 import { IStorageService, StorageScope, StorageTarget } from 'vs/platform/storage/common/storage';
 import { Memento } from 'vs/workbench/common/memento';
 
+export interface IChatHistoryEntry {
+	text: string;
+	state?: any;
+}
+
 export const ICSChatWidgetHistoryService = createDecorator<ICSChatWidgetHistoryService>('ICSChatWidgetHistoryService');
 export interface ICSChatWidgetHistoryService {
 	_serviceBrand: undefined;
@@ -15,12 +20,12 @@ export interface ICSChatWidgetHistoryService {
 	readonly onDidClearHistory: Event<void>;
 
 	clearHistory(): void;
-	getHistory(providerId: string): string[];
-	saveHistory(providerId: string, history: string[]): void;
+	getHistory(providerId: string): IChatHistoryEntry[];
+	saveHistory(providerId: string, history: IChatHistoryEntry[]): void;
 }
 
 interface IChatHistory {
-	history: { [providerId: string]: string[] };
+	history: { [providerId: string]: IChatHistoryEntry[] };
 }
 
 export class ChatWidgetHistoryService implements ICSChatWidgetHistoryService {
@@ -36,14 +41,20 @@ export class ChatWidgetHistoryService implements ICSChatWidgetHistoryService {
 		@IStorageService storageService: IStorageService
 	) {
 		this.memento = new Memento('csChat-session', storageService);
-		this.viewState = this.memento.getMemento(StorageScope.WORKSPACE, StorageTarget.MACHINE) as IChatHistory;
+		const loadedState = this.memento.getMemento(StorageScope.WORKSPACE, StorageTarget.MACHINE) as IChatHistory;
+		for (const provider in loadedState.history) {
+			// Migration from old format
+			loadedState.history[provider] = loadedState.history[provider].map(entry => typeof entry === 'string' ? { text: entry } : entry);
+		}
+
+		this.viewState = loadedState;
 	}
 
-	getHistory(providerId: string): string[] {
+	getHistory(providerId: string): IChatHistoryEntry[] {
 		return this.viewState.history?.[providerId] ?? [];
 	}
 
-	saveHistory(providerId: string, history: string[]): void {
+	saveHistory(providerId: string, history: IChatHistoryEntry[]): void {
 		if (!this.viewState.history) {
 			this.viewState.history = {};
 		}

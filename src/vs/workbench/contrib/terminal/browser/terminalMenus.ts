@@ -398,12 +398,12 @@ export function setupTerminalMenus(): void {
 						ContextKeyExpr.or(
 							ContextKeyExpr.and(
 								ContextKeyExpr.equals(`config.${TerminalSettingId.TabsShowActiveTerminal}`, 'singleTerminal'),
-								ContextKeyExpr.equals(TerminalContextKeyStrings.Count, 1)
+								ContextKeyExpr.equals(TerminalContextKeyStrings.GroupCount, 1)
 							),
 							ContextKeyExpr.and(
 								ContextKeyExpr.equals(`config.${TerminalSettingId.TabsShowActiveTerminal}`, 'singleTerminalOrNarrow'),
 								ContextKeyExpr.or(
-									ContextKeyExpr.equals(TerminalContextKeyStrings.Count, 1),
+									ContextKeyExpr.equals(TerminalContextKeyStrings.GroupCount, 1),
 									ContextKeyExpr.has(TerminalContextKeyStrings.TabsNarrow)
 								)
 							),
@@ -433,12 +433,12 @@ export function setupTerminalMenus(): void {
 							ContextKeyExpr.not(`config.${TerminalSettingId.TabsEnabled}`),
 							ContextKeyExpr.and(
 								ContextKeyExpr.equals(`config.${TerminalSettingId.TabsShowActions}`, 'singleTerminal'),
-								ContextKeyExpr.equals(TerminalContextKeyStrings.Count, 1)
+								ContextKeyExpr.equals(TerminalContextKeyStrings.GroupCount, 1)
 							),
 							ContextKeyExpr.and(
 								ContextKeyExpr.equals(`config.${TerminalSettingId.TabsShowActions}`, 'singleTerminalOrNarrow'),
 								ContextKeyExpr.or(
-									ContextKeyExpr.equals(TerminalContextKeyStrings.Count, 1),
+									ContextKeyExpr.equals(TerminalContextKeyStrings.GroupCount, 1),
 									ContextKeyExpr.has(TerminalContextKeyStrings.TabsNarrow)
 								)
 							),
@@ -468,12 +468,12 @@ export function setupTerminalMenus(): void {
 							ContextKeyExpr.not(`config.${TerminalSettingId.TabsEnabled}`),
 							ContextKeyExpr.and(
 								ContextKeyExpr.equals(`config.${TerminalSettingId.TabsShowActions}`, 'singleTerminal'),
-								ContextKeyExpr.equals(TerminalContextKeyStrings.Count, 1)
+								ContextKeyExpr.equals(TerminalContextKeyStrings.GroupCount, 1)
 							),
 							ContextKeyExpr.and(
 								ContextKeyExpr.equals(`config.${TerminalSettingId.TabsShowActions}`, 'singleTerminalOrNarrow'),
 								ContextKeyExpr.or(
-									ContextKeyExpr.equals(TerminalContextKeyStrings.Count, 1),
+									ContextKeyExpr.equals(TerminalContextKeyStrings.GroupCount, 1),
 									ContextKeyExpr.has(TerminalContextKeyStrings.TabsNarrow)
 								)
 							),
@@ -515,7 +515,7 @@ export function setupTerminalMenus(): void {
 						title: localize('workbench.action.terminal.clearLong', "Clear Terminal"),
 						icon: Codicon.clearAll
 					},
-					group: 'execute',
+					group: 'navigation',
 					order: 4,
 					when: ContextKeyExpr.equals('view', TERMINAL_VIEW_ID),
 					isHiddenByDefault: true
@@ -529,7 +529,7 @@ export function setupTerminalMenus(): void {
 						title: localize('workbench.action.terminal.runActiveFile', "Run Active File"),
 						icon: Codicon.run
 					},
-					group: 'execute',
+					group: 'navigation',
 					order: 5,
 					when: ContextKeyExpr.equals('view', TERMINAL_VIEW_ID),
 					isHiddenByDefault: true
@@ -543,7 +543,7 @@ export function setupTerminalMenus(): void {
 						title: localize('workbench.action.terminal.runSelectedText', "Run Selected Text"),
 						icon: Codicon.selection
 					},
-					group: 'execute',
+					group: 'navigation',
 					order: 6,
 					when: ContextKeyExpr.equals('view', TERMINAL_VIEW_ID),
 					isHiddenByDefault: true
@@ -571,6 +571,17 @@ export function setupTerminalMenus(): void {
 					command: {
 						id: TerminalCommandId.MoveToEditor,
 						title: terminalStrings.moveToEditor.value
+					},
+					group: ContextMenuGroup.Create,
+					order: 2
+				}
+			},
+			{
+				id: MenuId.TerminalTabContext,
+				item: {
+					command: {
+						id: TerminalCommandId.MoveIntoNewWindow,
+						title: terminalStrings.moveIntoNewWindow.value
 					},
 					group: ContextMenuGroup.Create,
 					order: 2
@@ -666,7 +677,7 @@ export function setupTerminalMenus(): void {
 			title: terminalStrings.rename
 		},
 		when: ResourceContextKey.Scheme.isEqualTo(Schemas.vscodeTerminal),
-		group: '3_files'
+		group: '2_files'
 	});
 
 	MenuRegistry.appendMenuItem(MenuId.EditorTitleContext, {
@@ -675,7 +686,7 @@ export function setupTerminalMenus(): void {
 			title: terminalStrings.changeColor
 		},
 		when: ResourceContextKey.Scheme.isEqualTo(Schemas.vscodeTerminal),
-		group: '3_files'
+		group: '2_files'
 	});
 
 	MenuRegistry.appendMenuItem(MenuId.EditorTitleContext, {
@@ -684,7 +695,7 @@ export function setupTerminalMenus(): void {
 			title: terminalStrings.changeIcon
 		},
 		when: ResourceContextKey.Scheme.isEqualTo(Schemas.vscodeTerminal),
-		group: '3_files'
+		group: '2_files'
 	});
 	MenuRegistry.appendMenuItem(MenuId.EditorTitleContext, {
 		command: {
@@ -692,7 +703,7 @@ export function setupTerminalMenus(): void {
 			title: terminalStrings.toggleSizeToContentWidth
 		},
 		when: ResourceContextKey.Scheme.isEqualTo(Schemas.vscodeTerminal),
-		group: '3_files'
+		group: '2_files'
 	});
 
 	MenuRegistry.appendMenuItem(MenuId.EditorTitle, {
@@ -779,6 +790,6 @@ export function getTerminalActionBarArgs(location: ITerminalLocationOptions, pro
 		submenuActions.unshift(defaultSubmenuProfileAction);
 	}
 
-	const dropdownAction = new Action('refresh profiles', 'Launch Profile...', 'codicon-chevron-down', true);
+	const dropdownAction = new Action('refresh profiles', localize('launchProfile', 'Launch Profile...'), 'codicon-chevron-down', true);
 	return { dropdownAction, dropdownMenuActions: dropdownActions, className: `terminal-tab-actions-${terminalService.resolveLocation(location)}` };
 }

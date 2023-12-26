@@ -216,7 +216,7 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration).regis
 				localize('scm.providerCountBadge.auto', "Only show count badge for Source Control Provider when non-zero."),
 				localize('scm.providerCountBadge.visible', "Show Source Control Provider count badges.")
 			],
-			markdownDescription: localize('scm.providerCountBadge', "Controls the count badges on Source Control Provider headers. These headers appear in the \"Source Control\", and \"Source Control Sync\" views when there is more than one provider or when the {0} setting is enabled, as well as in the \"Source Control Repositories\" view.", '\`#scm.alwaysShowRepositories#\`'),
+			markdownDescription: localize('scm.providerCountBadge', "Controls the count badges on Source Control Provider headers. These headers appear in the Source Control view when there is more than one provider or when the {0} setting is enabled, and in the Source Control Repositories view.", '\`#scm.alwaysShowRepositories#\`'),
 			default: 'hidden'
 		},
 		'scm.defaultViewMode': {
@@ -255,10 +255,19 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration).regis
 			markdownDescription: localize('inputFontSize', "Controls the font size for the input message in pixels."),
 			default: 13
 		},
-		'scm.inputMaxLines': {
+		'scm.inputMaxLineCount': {
 			type: 'number',
 			markdownDescription: localize('inputMaxLines', "Controls the maximum number of lines that the input will auto-grow to."),
+			minimum: 1,
+			maximum: 50,
 			default: 10
+		},
+		'scm.inputMinLineCount': {
+			type: 'number',
+			markdownDescription: localize('inputMinLines', "Controls the minimum number of lines that the input will auto-grow from."),
+			minimum: 1,
+			maximum: 50,
+			default: 1
 		},
 		'scm.alwaysShowRepositories': {
 			type: 'boolean',
@@ -284,6 +293,11 @@ Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Configuration).regis
 		'scm.showActionButton': {
 			type: 'boolean',
 			markdownDescription: localize('showActionButton', "Controls whether an action button can be shown in the Source Control view."),
+			default: true
+		},
+		'scm.showInputActionButton': {
+			type: 'boolean',
+			markdownDescription: localize('showInputActionButton', "Controls whether an action button can be shown in the Source Control input."),
 			default: true
 		},
 		'scm.showIncomingChanges': {

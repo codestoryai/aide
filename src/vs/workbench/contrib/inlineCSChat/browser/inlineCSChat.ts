@@ -5,13 +5,11 @@
 
 import { Dimension } from 'vs/base/browser/dom';
 import { Event } from 'vs/base/common/event';
-import { IMarkdownString } from 'vs/base/common/htmlContent';
 import { ICodeEditor } from 'vs/editor/browser/editorBrowser';
 import { ISingleEditOperation } from 'vs/editor/common/core/editOperation';
 import { ITextModel } from 'vs/editor/common/model';
 import { IInlineChatWidgetContrib } from 'vs/workbench/contrib/inlineCSChat/browser/inlineCSChatWidget';
 import { IInlineCSChatSlashCommand } from 'vs/workbench/contrib/inlineCSChat/common/inlineCSChat';
-import { ExpansionState } from 'vs/workbench/contrib/inlineChat/browser/inlineChatSession';
 import { IUntitledTextEditorModel } from 'vs/workbench/services/untitled/common/untitledTextEditorModel';
 
 export interface IInlineChatWidget {
@@ -33,8 +31,6 @@ export interface IInlineChatWidget {
 	showEditsPreview(textModel0: ITextModel, textModelN: ITextModel, allEdits: ISingleEditOperation[][]): Promise<void>;
 	showsAnyPreview(): boolean;
 	updateInfo(message: string): void;
-	updateMarkdownMessage(message: IMarkdownString | undefined): string | undefined;
-	updateMarkdownMessageExpansionState(expansionState: ExpansionState): void;
 	updateProgress(show: boolean): void;
 	getSlashCommands(): IInlineCSChatSlashCommand[];
 	updateSlashCommands(commands: IInlineCSChatSlashCommand[]): void;

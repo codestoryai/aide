@@ -34,10 +34,14 @@ suite('WindowsFinder', () => {
 	function createTestCodeWindow(options: { lastFocusTime: number; openedFolderUri?: URI; openedWorkspace?: IWorkspaceIdentifier }): ICodeWindow {
 		return new class implements ICodeWindow {
 			onWillLoad: Event<ILoadEvent> = Event.None;
+			onDidMaximize = Event.None;
+			onDidUnmaximize = Event.None;
 			onDidTriggerSystemContextMenu: Event<{ x: number; y: number }> = Event.None;
 			onDidSignalReady: Event<void> = Event.None;
 			onDidClose: Event<void> = Event.None;
 			onDidDestroy: Event<void> = Event.None;
+			onDidEnterFullScreen: Event<void> = Event.None;
+			onDidLeaveFullScreen: Event<void> = Event.None;
 			whenClosedOrLoaded: Promise<void> = Promise.resolve();
 			id: number = -1;
 			win: Electron.BrowserWindow = null!;

@@ -40,17 +40,16 @@ export class SubmitAction extends Action2 {
 	}
 
 	run(accessor: ServicesAccessor, ...args: any[]) {
-		const context: IChatExecuteActionContext = args[0];
+		const context: IChatExecuteActionContext | undefined = args[0];
 
 		const widgetService = accessor.get(ICSChatWidgetService);
-		const widget = context.widget ?? widgetService.lastFocusedWidget;
-		widget?.acceptInput(context.inputValue);
+		const widget = context?.widget ?? widgetService.lastFocusedWidget;
+		widget?.acceptInput(context?.inputValue);
 	}
 }
 
 export function registerChatExecuteActions() {
 	registerAction2(SubmitAction);
-
 	registerAction2(class CancelAction extends Action2 {
 		constructor() {
 			super({
