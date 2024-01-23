@@ -27,6 +27,9 @@ export function activate(context: vscode.ExtensionContext): void {
 
 	// keybindings.json/package.json context key suggestions
 	context.subscriptions.push(registerContextKeyCompletions());
+
+	// modelSelection.json variable suggestions
+	context.subscriptions.push(registerVariableCompletions('**/modelSelection.json'));
 }
 
 function registerSettingsCompletions(): vscode.Disposable {

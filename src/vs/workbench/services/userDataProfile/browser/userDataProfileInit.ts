@@ -23,6 +23,7 @@ import { IRequestService, asJson } from 'vs/platform/request/common/request';
 import { CancellationToken } from 'vs/base/common/cancellation';
 import { URI } from 'vs/base/common/uri';
 import { ProfileResourceType } from 'vs/platform/userDataProfile/common/userDataProfile';
+import { ModelSelectionResourceInitializer } from 'vs/workbench/services/userDataProfile/browser/modelSelectionResource';
 
 export class UserDataProfileInitializer implements IUserDataInitializer {
 
@@ -82,6 +83,9 @@ export class UserDataProfileInitializer implements IUserDataInitializer {
 			}
 			if (profileTemplate?.snippets) {
 				promises.push(this.initialize(new SnippetsResourceInitializer(this.userDataProfileService, this.fileService, this.uriIdentityService), profileTemplate.snippets, ProfileResourceType.Snippets));
+			}
+			if (profileTemplate?.modelSelection) {
+				promises.push(this.initialize(new ModelSelectionResourceInitializer(this.userDataProfileService, this.fileService, this.logService), profileTemplate.modelSelection, ProfileResourceType.ModelSelection));
 			}
 			promises.push(this.initializeInstalledExtensions(instantiationService));
 			await Promises.settled(promises);

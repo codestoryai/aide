@@ -25,6 +25,7 @@ import { isString } from 'vs/base/common/types';
 export const enum ProfileResourceType {
 	Settings = 'settings',
 	Keybindings = 'keybindings',
+	ModelSelection = 'modelSelection',
 	Snippets = 'snippets',
 	Tasks = 'tasks',
 	Extensions = 'extensions',
@@ -46,6 +47,7 @@ export interface IUserDataProfile {
 	readonly globalStorageHome: URI;
 	readonly settingsResource: URI;
 	readonly keybindingsResource: URI;
+	readonly modelSelectionResource: URI;
 	readonly tasksResource: URI;
 	readonly snippetsHome: URI;
 	readonly extensionsResource: URI;
@@ -65,6 +67,7 @@ export function isUserDataProfile(thing: unknown): thing is IUserDataProfile {
 		&& URI.isUri(candidate.globalStorageHome)
 		&& URI.isUri(candidate.settingsResource)
 		&& URI.isUri(candidate.keybindingsResource)
+		&& URI.isUri(candidate.modelSelectionResource)
 		&& URI.isUri(candidate.tasksResource)
 		&& URI.isUri(candidate.snippetsHome)
 		&& URI.isUri(candidate.extensionsResource)
@@ -132,6 +135,7 @@ export function reviveProfile(profile: UriDto<IUserDataProfile>, scheme: string)
 		globalStorageHome: URI.revive(profile.globalStorageHome).with({ scheme }),
 		settingsResource: URI.revive(profile.settingsResource).with({ scheme }),
 		keybindingsResource: URI.revive(profile.keybindingsResource).with({ scheme }),
+		modelSelectionResource: URI.revive(profile.modelSelectionResource).with({ scheme }),
 		tasksResource: URI.revive(profile.tasksResource).with({ scheme }),
 		snippetsHome: URI.revive(profile.snippetsHome).with({ scheme }),
 		extensionsResource: URI.revive(profile.extensionsResource).with({ scheme }),
@@ -152,6 +156,7 @@ export function toUserDataProfile(id: string, name: string, location: URI, profi
 		globalStorageHome: defaultProfile && options?.useDefaultFlags?.globalState ? defaultProfile.globalStorageHome : joinPath(location, 'globalStorage'),
 		settingsResource: defaultProfile && options?.useDefaultFlags?.settings ? defaultProfile.settingsResource : joinPath(location, 'settings.json'),
 		keybindingsResource: defaultProfile && options?.useDefaultFlags?.keybindings ? defaultProfile.keybindingsResource : joinPath(location, 'keybindings.json'),
+		modelSelectionResource: defaultProfile && options?.useDefaultFlags?.modelSelection ? defaultProfile.modelSelectionResource : joinPath(location, 'modelSelection.json'),
 		tasksResource: defaultProfile && options?.useDefaultFlags?.tasks ? defaultProfile.tasksResource : joinPath(location, 'tasks.json'),
 		snippetsHome: defaultProfile && options?.useDefaultFlags?.snippets ? defaultProfile.snippetsHome : joinPath(location, 'snippets'),
 		extensionsResource: defaultProfile && options?.useDefaultFlags?.extensions ? defaultProfile.extensionsResource : joinPath(location, 'extensions.json'),

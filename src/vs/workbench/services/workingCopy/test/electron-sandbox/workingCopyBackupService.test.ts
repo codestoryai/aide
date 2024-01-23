@@ -46,6 +46,7 @@ const NULL_PROFILE = {
 	settingsResource: joinPath(homeDir, 'settings.json'),
 	globalStorageHome: joinPath(homeDir, 'globalStorage'),
 	keybindingsResource: joinPath(homeDir, 'keybindings.json'),
+	modelSelectionResource: joinPath(homeDir, 'modelSelection.json'),
 	tasksResource: joinPath(homeDir, 'tasks.json'),
 	snippetsHome: joinPath(homeDir, 'snippets'),
 	extensionsResource: joinPath(homeDir, 'extensions.json'),

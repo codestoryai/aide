@@ -54,6 +54,7 @@ export interface IUserDataProfileManagementService {
 export interface IUserDataProfileTemplate {
 	readonly settings?: string;
 	readonly keybindings?: string;
+	readonly modelSelection?: string;
 	readonly tasks?: string;
 	readonly snippets?: string;
 	readonly globalState?: string;

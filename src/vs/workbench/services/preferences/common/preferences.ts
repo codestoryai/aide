@@ -12,6 +12,7 @@ import { URI } from 'vs/base/common/uri';
 import { IRange } from 'vs/editor/common/core/range';
 import { IEditorContribution } from 'vs/editor/common/editorCommon';
 import { ITextModel } from 'vs/editor/common/model';
+import { AzureOpenAIProviderConfig, ModelProviderConfig, OpenAIProviderConfig, ProviderConfig, ProviderType } from 'vs/platform/aiModel/common/aiModels';
 import { ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
 import { ConfigurationScope, EditPresentationTypes, IExtensionInfo } from 'vs/platform/configuration/common/configurationRegistry';
 import { IEditorOptions } from 'vs/platform/editor/common/editor';
@@ -233,6 +234,9 @@ export interface IKeybindingsEditorOptions extends IEditorOptions {
 	query?: string;
 }
 
+export interface IModelSelectionEditorModel<T> extends IPreferencesEditorModel<T> {
+}
+
 export const IPreferencesService = createDecorator<IPreferencesService>('preferencesService');
 
 export interface IPreferencesService {
@@ -255,6 +259,8 @@ export interface IPreferencesService {
 	openFolderSettings(options: IOpenSettingsOptions & { folderUri: IOpenSettingsOptions['folderUri'] }): Promise<IEditorPane | undefined>;
 	openGlobalKeybindingSettings(textual: boolean, options?: IKeybindingsEditorOptions): Promise<void>;
 	openDefaultKeybindingsFile(): Promise<IEditorPane | undefined>;
+	openModelSelectionSettings(textual: boolean): Promise<void>;
+	OpenDefaultModelSelectionFile(): Promise<IEditorPane | undefined>;
 	openLanguageSpecificSettings(languageId: string, options?: IOpenSettingsOptions): Promise<IEditorPane | undefined>;
 	getEditableSettingsURI(configurationTarget: ConfigurationTarget, resource?: URI): Promise<URI | null>;
 
@@ -329,3 +335,54 @@ export interface IDefineKeybindingEditorContribution extends IEditorContribution
 export const FOLDER_SETTINGS_PATH = '.vscode/settings.json';
 export const DEFAULT_SETTINGS_EDITOR_SETTING = 'workbench.settings.openDefaultSettings';
 export const USE_SPLIT_JSON_SETTING = 'workbench.settings.useSplitJSON';
+
+export interface IModelItemEntry {
+	modelItem: IModelItem;
+}
+
+export interface IModelItem {
+	key: string;
+	name: string;
+	contextLength: number;
+	temperature: number;
+	provider: IProviderItem;
+	providerConfig: ModelProviderConfig;
+}
+
+export const isModelItemConfigComplete = (modelItem: IModelItem): boolean => {
+	const { name, contextLength, temperature, provider, providerConfig } = modelItem;
+	return !!name && !!contextLength && !!temperature
+		&& isProviderItemConfigComplete(provider)
+		&& providerConfig.type === provider.type
+		&& (providerConfig.type === 'azure-openai' ? !!providerConfig.deploymentID : true);
+};
+
+export interface IProviderItemEntry {
+	providerItem: IProviderItem;
+}
+
+export type IProviderItem = { type: ProviderType } & ProviderConfig;
+
+export const isProviderItemConfigComplete = (providerItem: IProviderItem): boolean => {
+	switch (providerItem.type) {
+		case 'codestory': {
+			return true;
+		}
+		case 'azure-openai': {
+			const { name, apiKey, apiBase } = providerItem as AzureOpenAIProviderConfig;
+			// If both API key and API base are absent, we'll consider it complete because the backend has defaults.
+			// If only one is absent, we'll consider it incomplete.
+			return !!name && !!apiKey && !!apiBase;
+		}
+		case 'openai-default': {
+			const { name, apiKey } = providerItem as OpenAIProviderConfig;
+			return !!name && !!apiKey;
+		}
+		case 'togetherai': {
+			const { name, apiKey } = providerItem as OpenAIProviderConfig;
+			return !!name && !!apiKey;
+		}
+		case 'ollama':
+			return true;
+	}
+};

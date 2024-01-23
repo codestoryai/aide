@@ -26,6 +26,7 @@ import { parseUserDataProfilesManifest, stringifyLocalProfiles } from 'vs/platfo
 import { toFormattedString } from 'vs/base/common/jsonFormatter';
 import { trim } from 'vs/base/common/strings';
 import { IMachinesData, IUserDataSyncMachine } from 'vs/platform/userDataSync/common/userDataSyncMachines';
+import { getModelSelectionContentFromSyncContent } from 'vs/platform/userDataSync/common/modelSelectionSync';
 
 interface ISyncResourceUriInfo {
 	readonly remote: boolean;
@@ -143,6 +144,7 @@ export class UserDataSyncResourceProviderService implements IUserDataSyncResourc
 		switch (resolved.syncResource) {
 			case SyncResource.Settings: return this.getSettingsAssociatedResources(uri, profile);
 			case SyncResource.Keybindings: return this.getKeybindingsAssociatedResources(uri, profile);
+			case SyncResource.ModelSelection: return this.getModelSelectionAssociatedResources(uri, profile);
 			case SyncResource.Tasks: return this.getTasksAssociatedResources(uri, profile);
 			case SyncResource.Snippets: return this.getSnippetsAssociatedResources(uri, profile);
 			case SyncResource.GlobalState: return this.getGlobalStateAssociatedResources(uri, profile);
@@ -220,6 +222,7 @@ export class UserDataSyncResourceProviderService implements IUserDataSyncResourc
 		switch (syncResource) {
 			case SyncResource.Settings: return this.resolveSettingsNodeContent(syncData, node);
 			case SyncResource.Keybindings: return this.resolveKeybindingsNodeContent(syncData, node);
+			case SyncResource.ModelSelection: return this.resolveModelSelectionNodeContent(syncData, node);
 			case SyncResource.Tasks: return this.resolveTasksNodeContent(syncData, node);
 			case SyncResource.Snippets: return this.resolveSnippetsNodeContent(syncData, node);
 			case SyncResource.GlobalState: return this.resolveGlobalStateNodeContent(syncData, node);
@@ -240,6 +243,7 @@ export class UserDataSyncResourceProviderService implements IUserDataSyncResourc
 			case SyncResource.Profiles: return this.resolveLatestProfilesContent(profile);
 			case SyncResource.Settings: return null;
 			case SyncResource.Keybindings: return null;
+			case SyncResource.ModelSelection: return null;
 			case SyncResource.Tasks: return null;
 			case SyncResource.Snippets: return null;
 			case SyncResource.WorkspaceState: return null;
@@ -270,6 +274,20 @@ export class UserDataSyncResourceProviderService implements IUserDataSyncResourc
 		switch (node) {
 			case 'keybindings.json':
 				return getKeybindingsContentFromSyncContent(syncData.content, !!this.configurationService.getValue(CONFIG_SYNC_KEYBINDINGS_PER_PLATFORM), this.logService);
+		}
+		return null;
+	}
+
+	private getModelSelectionAssociatedResources(uri: URI, profile: IUserDataProfile | undefined): { resource: URI; comparableResource: URI }[] {
+		const resource = this.extUri.joinPath(uri, 'modelSelection.json');
+		const comparableResource = profile ? profile.modelSelectionResource : this.extUri.joinPath(uri, UserDataSyncResourceProviderService.NOT_EXISTING_RESOURCE);
+		return [{ resource, comparableResource }];
+	}
+
+	private resolveModelSelectionNodeContent(syncData: ISyncData, node: string): string | null {
+		switch (node) {
+			case 'modelSelection.json':
+				return getModelSelectionContentFromSyncContent(syncData.content, this.logService);
 		}
 		return null;
 	}

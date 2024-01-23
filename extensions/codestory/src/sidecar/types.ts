@@ -3,6 +3,8 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+import { ModelProviderConfiguration, ModelSelection, ProviderSpecificConfiguration } from 'vscode';
+
 
 export type OptionString =
 	| { type: 'Some'; value: string }
@@ -45,6 +47,8 @@ export type ConversationState =
 	| 'Pending'
 	| 'Started'
 	| 'StreamingAnswer'
+	| 'ReRankingStarted'
+	| 'ReRankingFinished'
 	| 'Finished';
 
 export interface ConversationMessage {
@@ -277,6 +281,14 @@ export type InLineAgentMessageState =
 	| 'Finished'
 	| 'Errored';
 
+export type InLineAgentLLMType =
+	| 'MistralInstruct'
+	| 'Mixtral'
+	| 'Gpt4'
+	| 'GPT3_5_16k'
+	| 'Gpt4_32k'
+	| 'Gpt4Turbo';
+
 export interface InLineAgentDocumentSymbol {
 	name: string | null;
 	start_position: Position;
@@ -292,6 +304,7 @@ export interface InLineAgentAnswer {
 	state: InLineAgentMessageState;
 	document_symbol: InLineAgentDocumentSymbol | null;
 	context_selection: InLineAgentContextSelection | null;
+	model: InLineAgentLLMType;
 }
 
 
@@ -397,7 +410,7 @@ export type EditFileResponse =
 					character: number;
 				};
 			}; content: string; previous_content: string;
-		}
+		};
 	}
 	| {
 		TextEdit: {
@@ -412,9 +425,9 @@ export type EditFileResponse =
 				};
 			}; content: string;
 			should_insert: boolean;
-		}
+		};
 	}
-	| { Status: { session_id: string, status: string } }
+	| { Status: { session_id: string; status: string } }
 	| { TextEditStreaming: { data: TextEditStreaming } };
 
 export type SyncUpdate =
@@ -429,3 +442,143 @@ export interface Progress {
 export type ProgressEvent =
 	| { index_percent: number }
 	| { sync_status: SyncStatus };
+
+
+export enum LLMType {
+	Mixtral,
+	MistralInstruct,
+	Gpt4,
+	GPT3_5_16k,
+	Gpt4_32k,
+	Gpt4Turbo
+}
+
+export type CustomLLMType = {
+	kind: 'Custom';
+	value: string;
+};
+
+export type LLMTypeVariant = LLMType | CustomLLMType;
+
+
+// Helper function to convert the model configuration to the sidecar type
+// the final json should look like this:
+// {
+// 	"slow_model":"slow_model",
+// 	"fast_model":"fast_model",
+// 	"models":{
+// 		"slow_model":
+// 			{
+// 				"context_length":16000,
+// 				"temperature":0.2,
+// 				"provider":{
+// 					"Azure":{
+// 						"deployment_id":"gpt35-turbo-access"
+// 					}
+// 				}
+// 			}
+// 		},
+// 		"providers":[
+// 			{"OpenAIAzureConfig":{
+// 				"deployment_id":"gpt35-turbo-access",
+// 				"api_base":"https://codestory-gpt4.openai.azure.com",
+// 				"api_key":"89ca8a49a33344c9b794b3dabcbbc5d0",
+// 				"api_version":"v1"
+// 			}
+// 		}
+// 	]
+// }
+export async function getSideCarModelConfiguration(modelSelection: ModelSelection) {
+	const slowModel = modelSelection.slowModel;
+	const fastModel = modelSelection.fastModel;
+	const models = modelSelection.models;
+	const modelRecord = {};
+	for (const [key, value] of Object.entries(models)) {
+		const modelConfiguration = {
+			context_length: value.contextLength,
+			temperature: value.temperature,
+			provider: getModelProviderConfiguration(value.provider, key),
+		};
+		// @ts-ignore
+		modelRecord[key] = modelConfiguration;
+		console.log('modelRecord');
+		console.log(modelConfiguration);
+		console.log(modelRecord);
+	}
+	const providers = modelSelection.providers;
+	const finalProviders = [];
+	for (const [key, value] of Object.entries(providers)) {
+		const providerConfigSideCar = getProviderconfiguration(key, value);
+		if (providerConfigSideCar !== null) {
+			finalProviders.push(providerConfigSideCar);
+		}
+	}
+	return {
+		'slow_model': slowModel,
+		'fast_model': fastModel,
+		'models': modelRecord,
+		'providers': finalProviders,
+	};
+}
+
+// The various types are present in aiModels.ts
+function getProviderconfiguration(type: string, value: ModelProviderConfiguration) {
+	if (type === 'openai-default') {
+		return {
+			'OpenAI': {
+				'api_key': value.apiKey,
+			}
+		};
+	}
+	if (type === 'azure-openai') {
+		return {
+			'OpenAIAzureConfig': {
+				'deployment_id': '',
+				'api_base': value.apiBase,
+				'api_key': value.apiKey,
+				// TODO(skcd): Fix the hardcoding of api version here, this will
+				// probably come from the api version in azure config
+				'api_version': '2023-08-01-preview',
+			}
+		};
+	}
+	if (type === 'togetherai') {
+		return {
+			'TogetherAI': {
+				'api_key': value.apiKey,
+			}
+		};
+	}
+	if (type === 'ollama') {
+		return {
+			'Ollama': {}
+		};
+	}
+	return null;
+}
+
+function getModelProviderConfiguration(providerConfiguration: ProviderSpecificConfiguration, llmType: string) {
+	if (providerConfiguration.type === 'openai-default') {
+		return 'OpenAI';
+	}
+	if (providerConfiguration.type === 'azure-openai') {
+		return {
+			'Azure': {
+				'deployment_id': providerConfiguration.deploymentID,
+			}
+		};
+	}
+	if (providerConfiguration.type === 'togetherai') {
+		return 'TogetherAI';
+	}
+	if (providerConfiguration.type === 'ollama') {
+		return 'Ollama';
+	}
+	if (providerConfiguration.type === 'codestory') {
+		return {
+			'CodeStory': {
+				'llm_type': llmType,
+			}
+		};
+	}
+}

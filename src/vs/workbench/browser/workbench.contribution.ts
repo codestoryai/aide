@@ -467,6 +467,11 @@ const registry = Registry.as<IConfigurationRegistry>(ConfigurationExtensions.Con
 				'description': localize('openDefaultKeybindings', "Controls whether opening keybinding settings also opens an editor showing all default keybindings."),
 				'default': false
 			},
+			'workbench.settings.openDefaultModelSelection': {
+				'type': 'boolean',
+				'description': localize('openDefaultModelSelection', "Controls whether opening model selection settings also opens an editor showing the default model selection."),
+				default: false
+			},
 			'workbench.sideBar.location': {
 				'type': 'string',
 				'enum': ['left', 'right'],

@@ -46,6 +46,9 @@ import { SettingsEditor2Input } from 'vs/workbench/services/preferences/common/p
 import { IUserDataProfileService, CURRENT_PROFILE_CONTEXT } from 'vs/workbench/services/userDataProfile/common/userDataProfile';
 import { IUserDataProfilesService } from 'vs/platform/userDataProfile/common/userDataProfile';
 import { isCodeEditor } from 'vs/editor/browser/editorBrowser';
+import { ModelSelectionEditor } from 'vs/workbench/contrib/preferences/browser/modelSelectionEditor';
+import { ModelSelectionEditorInput } from 'vs/workbench/services/preferences/browser/modelSelectionEditorInput';
+import { ModelSelectionIndicator } from 'vs/workbench/contrib/preferences/browser/modelSelectionIndicator';
 
 const SETTINGS_EDITOR_COMMAND_SEARCH = 'settings.action.search';
 
@@ -82,6 +85,17 @@ Registry.as<IEditorPaneRegistry>(EditorExtensions.EditorPane).registerEditorPane
 	),
 	[
 		new SyncDescriptor(KeybindingsEditorInput)
+	]
+);
+
+Registry.as<IEditorPaneRegistry>(EditorExtensions.EditorPane).registerEditorPane(
+	EditorPaneDescriptor.create(
+		ModelSelectionEditor,
+		ModelSelectionEditor.ID,
+		nls.localize('modelSelectionEditor', "Model Selection Editor")
+	),
+	[
+		new SyncDescriptor(ModelSelectionEditorInput)
 	]
 );
 
@@ -180,6 +194,7 @@ class PreferencesActionsContribution extends Disposable implements IWorkbenchCon
 
 		this.registerSettingsActions();
 		this.registerKeybindingsActions();
+		this.registerModelSelectionActions();
 
 		this.updatePreferencesEditorMenuItem();
 		this._register(workspaceContextService.onDidChangeWorkbenchState(() => this.updatePreferencesEditorMenuItem()));
@@ -1215,6 +1230,72 @@ class PreferencesActionsContribution extends Disposable implements IWorkbenchCon
 			}
 		}
 	}
+
+	private registerModelSelectionActions() {
+		const that = this;
+		const id = 'workbench.action.openModelSelection';
+		this._register(registerAction2(class extends Action2 {
+			constructor() {
+				super({
+					id,
+					title: { value: nls.localize('openModelSelection', "Open model selection options"), original: 'Open model selection options' },
+					category,
+					icon: preferencesOpenSettingsIcon,
+					keybinding: {
+						when: null,
+						weight: KeybindingWeight.WorkbenchContrib,
+						primary: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.Comma,
+					},
+					menu: [
+						{ id: MenuId.CommandPalette },
+						{
+							id: MenuId.EditorTitle,
+							when: ResourceContextKey.Resource.isEqualTo(that.userDataProfileService.currentProfile.modelSelectionResource.toString()),
+							group: 'navigation',
+							order: 1,
+						},
+						{
+							id: MenuId.GlobalActivity,
+							group: '2_configuration',
+							order: 5
+						}
+					]
+				});
+			}
+			run(accessor: ServicesAccessor) {
+				return accessor.get(IPreferencesService).openModelSelectionSettings(false);
+			}
+		}));
+		registerAction2(class extends Action2 {
+			constructor() {
+				super({
+					id: 'workbench.action.openDefaultModelSelectionFile',
+					title: { value: nls.localize('openDefaultModelSelectionFile', "Open Default Model Selection (JSON)"), original: 'Open Default Model Selection (JSON)' },
+					category,
+					menu: { id: MenuId.CommandPalette }
+				});
+			}
+			run(accessor: ServicesAccessor) {
+				return accessor.get(IPreferencesService).OpenDefaultModelSelectionFile();
+			}
+		});
+		registerAction2(class extends Action2 {
+			constructor() {
+				super({
+					id: 'workbench.action.openModelSelectionFile',
+					title: { value: nls.localize('openModelSelectionFile', "Open Model Selection (JSON)"), original: 'Open Model Selection (JSON)' },
+					category,
+					icon: preferencesOpenSettingsIcon,
+					menu: [
+						{ id: MenuId.CommandPalette }
+					]
+				});
+			}
+			run(accessor: ServicesAccessor) {
+				return accessor.get(IPreferencesService).openModelSelectionSettings(true);
+			}
+		});
+	}
 }
 
 class SettingsEditorTitleContribution extends Disposable implements IWorkbenchContribution {
@@ -1291,6 +1372,7 @@ const workbenchContributionsRegistry = Registry.as<IWorkbenchContributionsRegist
 workbenchContributionsRegistry.registerWorkbenchContribution(PreferencesActionsContribution, LifecyclePhase.Starting);
 workbenchContributionsRegistry.registerWorkbenchContribution(PreferencesContribution, LifecyclePhase.Starting);
 workbenchContributionsRegistry.registerWorkbenchContribution(SettingsEditorTitleContribution, LifecyclePhase.Restored);
+workbenchContributionsRegistry.registerWorkbenchContribution(ModelSelectionIndicator, LifecyclePhase.Starting);
 
 registerEditorContribution(SettingsEditorContribution.ID, SettingsEditorContribution, EditorContributionInstantiation.AfterFirstRender);
 

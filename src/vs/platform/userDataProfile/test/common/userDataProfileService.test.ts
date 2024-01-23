@@ -50,6 +50,7 @@ suite('UserDataProfileService (Common)', () => {
 		assert.strictEqual(testObject.defaultProfile.location.toString(), environmentService.userRoamingDataHome.toString());
 		assert.strictEqual(testObject.defaultProfile.globalStorageHome.toString(), joinPath(environmentService.userRoamingDataHome, 'globalStorage').toString());
 		assert.strictEqual(testObject.defaultProfile.keybindingsResource.toString(), joinPath(environmentService.userRoamingDataHome, 'keybindings.json').toString());
+		assert.strictEqual(testObject.defaultProfile.modelSelectionResource.toString(), joinPath(environmentService.userRoamingDataHome, 'modelSelection.json').toString());
 		assert.strictEqual(testObject.defaultProfile.settingsResource.toString(), joinPath(environmentService.userRoamingDataHome, 'settings.json').toString());
 		assert.strictEqual(testObject.defaultProfile.snippetsHome.toString(), joinPath(environmentService.userRoamingDataHome, 'snippets').toString());
 		assert.strictEqual(testObject.defaultProfile.tasksResource.toString(), joinPath(environmentService.userRoamingDataHome, 'tasks.json').toString());
@@ -191,6 +192,14 @@ suite('UserDataProfileService (Common)', () => {
 		assert.strictEqual(profile.isDefault, false);
 		assert.deepStrictEqual(profile.useDefaultFlags, { keybindings: true });
 		assert.strictEqual(profile.keybindingsResource.toString(), testObject.defaultProfile.keybindingsResource.toString());
+	});
+
+	test('profile using default profile for model selection', async () => {
+		const profile = await testObject.createNamedProfile('name', { useDefaultFlags: { modelSelection: true } });
+
+		assert.strictEqual(profile.isDefault, false);
+		assert.deepStrictEqual(profile.useDefaultFlags, { modelSelection: true });
+		assert.strictEqual(profile.modelSelectionResource.toString(), testObject.defaultProfile.modelSelectionResource.toString());
 	});
 
 	test('profile using default profile for snippets', async () => {

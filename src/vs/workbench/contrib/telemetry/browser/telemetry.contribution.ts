@@ -190,6 +190,11 @@ export class TelemetryContribution extends Disposable implements IWorkbenchContr
 			return 'keybindings';
 		}
 
+		// Check for model selection file
+		if (isEqual(resource, this.userDataProfileService.currentProfile.modelSelectionResource)) {
+			return 'modelSelection';
+		}
+
 		// Check for snippets
 		if (isEqualOrParent(resource, this.userDataProfileService.currentProfile.snippetsHome)) {
 			return 'snippets';

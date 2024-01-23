@@ -37,7 +37,7 @@ import { IEditorService, SIDE_GROUP, SIDE_GROUP_TYPE } from 'vs/workbench/servic
 import { KeybindingsEditorInput } from 'vs/workbench/services/preferences/browser/keybindingsEditorInput';
 import { DEFAULT_SETTINGS_EDITOR_SETTING, FOLDER_SETTINGS_PATH, IKeybindingsEditorOptions, IKeybindingsEditorPane, IOpenSettingsOptions, IPreferencesEditorModel, IPreferencesService, ISetting, ISettingsEditorOptions, USE_SPLIT_JSON_SETTING, validateSettingsEditorOptions } from 'vs/workbench/services/preferences/common/preferences';
 import { SettingsEditor2Input } from 'vs/workbench/services/preferences/common/preferencesEditorInput';
-import { defaultKeybindingsContents, DefaultKeybindingsEditorModel, DefaultRawSettingsEditorModel, DefaultSettings, DefaultSettingsEditorModel, Settings2EditorModel, SettingsEditorModel, WorkspaceConfigurationEditorModel } from 'vs/workbench/services/preferences/common/preferencesModels';
+import { defaultKeybindingsContents, DefaultKeybindingsEditorModel, DefaultModelSelectionEditorModel, DefaultRawSettingsEditorModel, DefaultSettings, DefaultSettingsEditorModel, Settings2EditorModel, SettingsEditorModel, WorkspaceConfigurationEditorModel } from 'vs/workbench/services/preferences/common/preferencesModels';
 import { IRemoteAgentService } from 'vs/workbench/services/remote/common/remoteAgentService';
 import { ITextEditorService } from 'vs/workbench/services/textfile/common/textEditorService';
 import { ITextFileService } from 'vs/workbench/services/textfile/common/textfiles';
@@ -45,6 +45,8 @@ import { isObject } from 'vs/base/common/types';
 import { SuggestController } from 'vs/editor/contrib/suggest/browser/suggestController';
 import { IUserDataProfileService } from 'vs/workbench/services/userDataProfile/common/userDataProfile';
 import { IUserDataProfilesService } from 'vs/platform/userDataProfile/common/userDataProfile';
+import { ModelSelectionEditorInput } from 'vs/workbench/services/preferences/browser/modelSelectionEditorInput';
+import { IEditorOptions } from 'vs/platform/editor/common/editor';
 
 const emptyEditableSettingsContent = '{\n}';
 
@@ -91,6 +93,7 @@ export class PreferencesService extends Disposable implements IPreferencesServic
 	}
 
 	readonly defaultKeybindingsResource = URI.from({ scheme: network.Schemas.vscode, authority: 'defaultsettings', path: '/keybindings.json' });
+	readonly defaultModelSelectionsResource = URI.from({ scheme: network.Schemas.vscode, authority: 'defaultsettings', path: '/modelSelection.json' });
 	private readonly defaultSettingsRawResource = URI.from({ scheme: network.Schemas.vscode, authority: 'defaultsettings', path: '/defaultSettings.json' });
 
 	get userSettingsResource(): URI {
@@ -156,6 +159,13 @@ export class PreferencesService extends Disposable implements IPreferencesServic
 			const defaultKeybindingsEditorModel = this.instantiationService.createInstance(DefaultKeybindingsEditorModel, uri);
 			const languageSelection = this.languageService.createById('jsonc');
 			const model = this._register(this.modelService.createModel(defaultKeybindingsEditorModel.content, languageSelection, uri));
+			return model;
+		}
+
+		if (this.defaultModelSelectionsResource.toString() === uri.toString()) {
+			const defaultModelSelectionSettingsEditorModel = this.instantiationService.createInstance(DefaultModelSelectionEditorModel, uri);
+			const languageSelection = this.languageService.createById('jsonc');
+			const model = this._register(this.modelService.createModel(defaultModelSelectionSettingsEditorModel.content, languageSelection, uri));
 			return model;
 		}
 
@@ -338,8 +348,36 @@ export class PreferencesService extends Disposable implements IPreferencesServic
 
 	}
 
+	async openModelSelectionSettings(textual: boolean, options?: IEditorOptions): Promise<void> {
+		options = { pinned: true, revealIfOpened: true, ...options };
+		if (textual) {
+			const emptyContents = '// ' + nls.localize('emptyModelSelectionsHeader', "Place your model selections in this file to override the defaults") + '\n{\n}';
+			const editableModelSelection = this.userDataProfileService.currentProfile.modelSelectionResource;
+			const openDefaultModelSelection = !!this.configurationService.getValue('workbench.settings.openDefaultModelSelection');
+
+			// Create as needed and open in editor
+			await this.createIfNotExists(editableModelSelection, emptyContents);
+			if (openDefaultModelSelection) {
+				const activeEditorGroup = this.editorGroupService.activeGroup;
+				const sideEditorGroup = this.editorGroupService.addGroup(activeEditorGroup.id, GroupDirection.RIGHT);
+				await Promise.all([
+					this.editorService.openEditor({ resource: this.defaultModelSelectionsResource, options: { pinned: true, preserveFocus: true, revealIfOpened: true, override: DEFAULT_EDITOR_ASSOCIATION.id }, label: nls.localize('defaultModelSelection', "Default Model Selection"), description: '' }),
+					this.editorService.openEditor({ resource: editableModelSelection, options }, sideEditorGroup.id)
+				]);
+			} else {
+				await this.editorService.openEditor({ resource: editableModelSelection, options });
+			}
+		} else {
+			await this.editorService.openEditor(this.instantiationService.createInstance(ModelSelectionEditorInput));
+		}
+	}
+
 	openDefaultKeybindingsFile(): Promise<IEditorPane | undefined> {
 		return this.editorService.openEditor({ resource: this.defaultKeybindingsResource, label: nls.localize('defaultKeybindings', "Default Keybindings") });
+	}
+
+	OpenDefaultModelSelectionFile(): Promise<IEditorPane | undefined> {
+		return this.editorService.openEditor({ resource: this.defaultModelSelectionsResource, label: nls.localize('defaultModelSelections', "Default Model Selection") });
 	}
 
 	private async openSettingsJson(resource: URI, options: IOpenSettingsOptions): Promise<IEditorPane | undefined> {

@@ -79,12 +79,14 @@ import { WorkbenchIconSelectBox } from 'vs/workbench/services/userDataProfile/br
 import { IHoverWidget } from 'vs/base/browser/ui/iconLabel/iconHoverDelegate';
 import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { KeyCode } from 'vs/base/common/keyCodes';
+import { ModelSelectionResource, ModelSelectionResourceTreeItem } from 'vs/workbench/services/userDataProfile/browser/modelSelectionResource';
 
 interface IUserDataProfileTemplate {
 	readonly name: string;
 	readonly icon?: string;
 	readonly settings?: string;
 	readonly keybindings?: string;
+	readonly modelSelection?: string;
 	readonly tasks?: string;
 	readonly snippets?: string;
 	readonly globalState?: string;
@@ -840,6 +842,10 @@ export class UserDataProfileImportExportService extends Disposable implements IU
 			progress(localize('progress keybindings', "Applying Keyboard Shortcuts..."));
 			await this.instantiationService.createInstance(KeybindingsResource).apply(profileTemplate.keybindings, profile);
 		}
+		if (profileTemplate.modelSelection && !profile.useDefaultFlags?.modelSelection) {
+			progress(localize('progress model selection', "Applying Model Selection..."));
+			await this.instantiationService.createInstance(ModelSelectionResource).apply(profileTemplate.modelSelection, profile);
+		}
 		if (profileTemplate.tasks && !profile.useDefaultFlags?.tasks) {
 			progress(localize('progress tasks', "Applying Tasks..."));
 			await this.instantiationService.createInstance(TasksResource).apply(profileTemplate.tasks, profile);
@@ -855,6 +861,10 @@ export class UserDataProfileImportExportService extends Disposable implements IU
 		if (profileTemplate.extensions && extensions && !profile.useDefaultFlags?.extensions) {
 			progress(localize('progress extensions', "Applying Extensions..."));
 			await this.instantiationService.createInstance(ExtensionsResource).apply(profileTemplate.extensions, profile);
+		}
+		if (profileTemplate.extensions && !profile.useDefaultFlags?.modelSelection) {
+			progress(localize('progress model selection', "Applying Model Selection..."));
+			await this.instantiationService.createInstance(ModelSelectionResource).apply(profileTemplate.extensions, profile);
 		}
 
 		return profile;
@@ -1293,6 +1303,7 @@ abstract class UserDataProfileImportExportState extends Disposable implements IT
 		const roots = await this.getRoots();
 		let settings: string | undefined;
 		let keybindings: string | undefined;
+		let modelSelection: string | undefined;
 		let tasks: string | undefined;
 		let snippets: string | undefined;
 		let extensions: string | undefined;
@@ -1305,6 +1316,8 @@ abstract class UserDataProfileImportExportState extends Disposable implements IT
 				settings = await root.getContent();
 			} else if (root instanceof KeybindingsResourceTreeItem) {
 				keybindings = await root.getContent();
+			} else if (root instanceof ModelSelectionResourceTreeItem) {
+				modelSelection = await root.getContent();
 			} else if (root instanceof TasksResourceTreeItem) {
 				tasks = await root.getContent();
 			} else if (root instanceof SnippetsResourceTreeItem) {
@@ -1321,6 +1334,7 @@ abstract class UserDataProfileImportExportState extends Disposable implements IT
 			icon,
 			settings,
 			keybindings,
+			modelSelection,
 			tasks,
 			snippets,
 			extensions,
@@ -1375,6 +1389,14 @@ class UserDataProfileExportState extends UserDataProfileImportExportState {
 			roots.push(keybindingsResourceTreeItem);
 		}
 
+		const modelSelectionResource = this.instantiationService.createInstance(ModelSelectionResource);
+		const modelSelectionContent = await modelSelectionResource.getContent(this.profile);
+		await modelSelectionResource.apply(modelSelectionContent, exportPreviewProfle);
+		const modelSelectionTreeItem = this.instantiationService.createInstance(ModelSelectionResourceTreeItem, exportPreviewProfle);
+		if (await modelSelectionTreeItem.hasContent()) {
+			roots.push(modelSelectionTreeItem);
+		}
+
 		const snippetsResource = this.instantiationService.createInstance(SnippetsResource);
 		const snippetsContent = await snippetsResource.getContent(this.profile);
 		await snippetsResource.apply(snippetsContent, exportPreviewProfle);
@@ -1420,6 +1442,7 @@ class UserDataProfileExportState extends UserDataProfileImportExportState {
 			globalStorageHome: profile.globalStorageHome,
 			settingsResource: profile.settingsResource.with({ scheme: USER_DATA_PROFILE_EXPORT_SCHEME }),
 			keybindingsResource: profile.keybindingsResource.with({ scheme: USER_DATA_PROFILE_EXPORT_SCHEME }),
+			modelSelectionResource: profile.modelSelectionResource.with({ scheme: USER_DATA_PROFILE_EXPORT_SCHEME }),
 			tasksResource: profile.tasksResource.with({ scheme: USER_DATA_PROFILE_EXPORT_SCHEME }),
 			snippetsHome: profile.snippetsHome.with({ scheme: USER_DATA_PROFILE_EXPORT_SCHEME }),
 			extensionsResource: profile.extensionsResource,
@@ -1488,6 +1511,15 @@ class UserDataProfileImportState extends UserDataProfileImportExportState {
 			const keybindingsResourceTreeItem = this.instantiationService.createInstance(KeybindingsResourceTreeItem, importPreviewProfle);
 			if (await keybindingsResourceTreeItem.hasContent()) {
 				roots.push(keybindingsResourceTreeItem);
+			}
+		}
+
+		if (this.profile.modelSelection) {
+			const modelSelectionResource = this.instantiationService.createInstance(ModelSelectionResource);
+			await modelSelectionResource.apply(this.profile.modelSelection, importPreviewProfle);
+			const modelSelectionTreeItem = this.instantiationService.createInstance(ModelSelectionResourceTreeItem, importPreviewProfle);
+			if (await modelSelectionTreeItem.hasContent()) {
+				roots.push(modelSelectionTreeItem);
 			}
 		}
 

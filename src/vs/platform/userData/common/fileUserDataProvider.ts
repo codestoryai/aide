@@ -57,6 +57,7 @@ export class FileUserDataProvider extends Disposable implements
 		for (const profile of this.userDataProfilesService.profiles) {
 			this.atomicReadWriteResources.add(profile.settingsResource);
 			this.atomicReadWriteResources.add(profile.keybindingsResource);
+			this.atomicReadWriteResources.add(profile.modelSelectionResource);
 			this.atomicReadWriteResources.add(profile.tasksResource);
 			this.atomicReadWriteResources.add(profile.extensionsResource);
 		}

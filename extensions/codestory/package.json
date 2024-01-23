@@ -16,7 +16,8 @@
     "csChat",
     "csChatVariables",
     "defaultChatAgent",
-    "chatAgents2Additions"
+    "chatAgents2Additions",
+    "modelSelection"
   ],
   "files": [
     "src/llm/embeddings/models/**/*",

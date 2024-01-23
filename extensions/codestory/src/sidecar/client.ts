@@ -8,7 +8,7 @@ import * as path from 'path';
 import { sleep } from '../utilities/sleep';
 import { CodeSymbolInformationEmbeddings, CodeSymbolKind } from '../utilities/types';
 import { callServerEventStreamingBufferedGET, callServerEventStreamingBufferedPOST } from './ssestream';
-import { ConversationMessage, DeepContextForView, EditFileResponse, InEditorRequest, InEditorTreeSitterDocumentationQuery, InEditorTreeSitterDocumentationReply, InLineAgentMessage, Position, RepoStatus, SemanticSearchResponse, SidecarVariableType, SidecarVariableTypes, SnippetInformation, SyncUpdate, TextDocument } from './types';
+import { ConversationMessage, DeepContextForView, EditFileResponse, getSideCarModelConfiguration, InEditorRequest, InEditorTreeSitterDocumentationQuery, InEditorTreeSitterDocumentationReply, InLineAgentMessage, Position, RepoStatus, SemanticSearchResponse, SidecarVariableType, SidecarVariableTypes, SnippetInformation, SyncUpdate, TextDocument } from './types';
 import { SelectionDataForExplain } from '../utilities/getSelectionContext';
 import { sidecarNotIndexRepository } from '../utilities/sidecarUrl';
 
@@ -43,13 +43,20 @@ export class RepoRef {
 export class SideCarClient {
 	private _url: string;
 	private _openAIKey: string | null = null;
+	private _modelConfiguration: vscode.ModelSelection;
 
 	constructor(
 		url: string,
 		openAIKey: string | null,
+		modelConfiguration: vscode.ModelSelection,
 	) {
 		this._url = url;
 		this._openAIKey = openAIKey;
+		this._modelConfiguration = modelConfiguration;
+	}
+
+	updateModelConfiguration(modelConfiguration: vscode.ModelSelection) {
+		this._modelConfiguration = modelConfiguration;
 	}
 
 	getRepoListUrl(): string {
@@ -140,16 +147,54 @@ export class SideCarClient {
 	async *getInLineEditorResponse(
 		context: InEditorRequest,
 	): AsyncIterableIterator<InLineAgentMessage> {
-		console.log('getInLineEditorResponse');
 		const baseUrl = new URL(this._url);
 		baseUrl.pathname = '/api/in_editor/answer';
-		console.log('getInLineEditorResponse');
-		console.log(context);
 		const url = baseUrl.toString();
+		const sideCarModelConfiguration = await getSideCarModelConfiguration(await vscode.modelSelection.getConfiguration());
+		// This is where we have to send the model selection object
+		// const modelConfig = {
+		// 	slow_model: this._modelConfiguration.slowModel,
+		// 	fast_model: this._modelConfiguration.fastModel,
+		// 	models: this._modelConfiguration.models,
+		// 	providers,
+		// };
+		console.log(JSON.stringify(sideCarModelConfiguration));
+		const modelConfig = {
+			slow_model: 'MistralInstruct',
+			fast_model: 'MistralInstruct',
+			models: {
+				Mixtral: {
+					context_length: 32000,
+					temperature: 0.2,
+					provider: 'TogetherAI',
+				},
+				MistralInstruct: {
+					context_length: 8000,
+					temperature: 0.2,
+					provider: 'TogetherAI',
+				},
+			},
+			providers: [
+				{
+					OpenAIAzureConfig: {
+						deployment_id: 'gpt35-turbo-access',
+						api_base: 'https://codestory-gpt4.openai.azure.com',
+						api_key: '89ca8a49a33344c9b794b3dabcbbc5d0',
+						api_version: '2023-08-01-preview',
+					},
+				},
+				{
+					TogetherAI: {
+						api_key: 'cc10d6774e67efef2004b85efdb81a3c9ba0b7682cc33d59c30834183502208d',
+					},
+				},
+			],
+		};
 		const finalContext = {
 			...context,
 			openai_key: this._openAIKey,
-		}
+			modelConfig: sideCarModelConfiguration,
+		};
 		const asyncIterableResponse = await callServerEventStreamingBufferedPOST(url, finalContext);
 		for await (const line of asyncIterableResponse) {
 			const lineParts = line.split('data:{');
@@ -228,6 +273,7 @@ export class SideCarClient {
 		baseUrl.pathname = '/api/agent/followup_chat';
 		const url = baseUrl.toString();
 		const activeWindowData = getCurrentActiveWindow();
+		const sideCarModelConfiguration = await getSideCarModelConfiguration(await vscode.modelSelection.getConfiguration());
 		const body = {
 			repo_ref: repoRef.getRepresentation(),
 			query: query,
@@ -236,6 +282,7 @@ export class SideCarClient {
 			project_labels: projectLabels,
 			active_window_data: activeWindowData,
 			openai_key: this._openAIKey,
+			model_config: sideCarModelConfiguration,
 		};
 		const asyncIterableResponse = await callServerEventStreamingBufferedPOST(url, body);
 		for await (const line of asyncIterableResponse) {
@@ -576,17 +623,39 @@ function getVariableType(
 function getCurrentActiveWindow(): {
 	file_path: string;
 	file_content: string;
+	visible_range_content: string;
+	start_line: number;
+	end_line: number;
 	language: string;
 } | undefined {
 	const activeWindow = vscode.window.activeTextEditor;
 	if (activeWindow === undefined) {
 		return undefined;
 	}
+	if (activeWindow.visibleRanges.length === 0) {
+		// Then we return the full length of the file here or otherwise
+		// we return whats present in the range
+		return undefined;
+	}
+	const visibleRanges = activeWindow.visibleRanges;
+	const startPosition = activeWindow.visibleRanges[0].start;
+	const endPosition = activeWindow.visibleRanges[visibleRanges.length - 1].end;
 	const fsFilePath = activeWindow.document.uri.fsPath;
+	const range = new vscode.Range(
+		startPosition.line,
+		0,
+		endPosition.line,
+		activeWindow.document.lineAt(endPosition.line).text.length
+	);
+	const visibleRagneContents = activeWindow.document.getText(range);
 	const contents = activeWindow.document.getText();
 	return {
 		file_path: fsFilePath,
 		file_content: contents,
+		visible_range_content: visibleRagneContents,
+		// as these are 0 indexed
+		start_line: startPosition.line + 1,
+		end_line: endPosition.line + 1,
 		language: activeWindow.document.languageId,
 	};
 }

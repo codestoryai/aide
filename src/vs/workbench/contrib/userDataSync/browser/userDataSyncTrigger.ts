@@ -16,6 +16,7 @@ import { VIEWLET_ID } from 'vs/workbench/contrib/extensions/common/extensions';
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { IHostService } from 'vs/workbench/services/host/browser/host';
 import { KeybindingsEditorInput } from 'vs/workbench/services/preferences/browser/keybindingsEditorInput';
+import { ModelSelectionEditorInput } from 'vs/workbench/services/preferences/browser/modelSelectionEditorInput';
 import { SettingsEditor2Input } from 'vs/workbench/services/preferences/common/preferencesEditorInput';
 
 export class UserDataSyncTrigger extends Disposable implements IWorkbenchContribution {
@@ -55,12 +56,18 @@ export class UserDataSyncTrigger extends Disposable implements IWorkbenchContrib
 		if (editorInput instanceof KeybindingsEditorInput) {
 			return 'keybindingsEditor';
 		}
+		if (editorInput instanceof ModelSelectionEditorInput) {
+			return 'modelSelectionEditor';
+		}
 		const resource = editorInput.resource;
 		if (isEqual(resource, this.userDataProfilesService.defaultProfile.settingsResource)) {
 			return 'settingsEditor';
 		}
 		if (isEqual(resource, this.userDataProfilesService.defaultProfile.keybindingsResource)) {
 			return 'keybindingsEditor';
+		}
+		if (isEqual(resource, this.userDataProfilesService.defaultProfile.modelSelectionResource)) {
+			return 'modelSelectionEditor';
 		}
 		return undefined;
 	}

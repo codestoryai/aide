@@ -114,6 +114,16 @@ export const reportFromStreamToSearchProgress = async (
 		if ('done' in conversationMessage) {
 			continue;
 		}
+		// Here we will get an event which will have the conversation_state as 'ReRankingStarted' and another
+		// which will have an event as 'ReRankingFinished'
+		if (conversationMessage.conversation_state === 'ReRankingStarted') {
+			console.log('ReRanking has started');
+			continue;
+		}
+		if (conversationMessage.conversation_state === 'ReRankingFinished') {
+			console.log('ReRanking has finsihed');
+			continue;
+		}
 		if (conversationMessage.answer !== null && conversationMessage.conversation_state === 'StreamingAnswer') {
 			// We need to parse the answer a bit here, because we get relative paths
 			// and not absolute paths. The right way to do this will be to attach

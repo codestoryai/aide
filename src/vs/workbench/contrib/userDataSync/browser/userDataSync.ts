@@ -398,7 +398,8 @@ export class UserDataSyncWorkbenchContribution extends Disposable implements IWo
 		}
 		const resource = source === SyncResource.Settings ? this.userDataProfileService.currentProfile.settingsResource
 			: source === SyncResource.Keybindings ? this.userDataProfileService.currentProfile.keybindingsResource
-				: this.userDataProfileService.currentProfile.tasksResource;
+				: source === SyncResource.Tasks ? this.userDataProfileService.currentProfile.tasksResource
+					: this.userDataProfileService.currentProfile.modelSelectionResource;
 		const editorUri = EditorResourceAccessor.getCanonicalUri(this.editorService.activeEditor, { supportSideBySide: SideBySideEditor.PRIMARY });
 		if (isEqual(resource, editorUri)) {
 			// Do not show notification if the file in error is active

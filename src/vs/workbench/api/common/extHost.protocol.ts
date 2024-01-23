@@ -28,6 +28,7 @@ import { EndOfLineSequence } from 'vs/editor/common/model';
 import { IModelChangedEvent } from 'vs/editor/common/model/mirrorTextModel';
 import { IAccessibilityInformation } from 'vs/platform/accessibility/common/accessibility';
 import { ILocalizedString } from 'vs/platform/action/common/action';
+import { IModelSelectionSettings } from 'vs/platform/aiModel/common/aiModels';
 import { ConfigurationTarget, IConfigurationChange, IConfigurationData, IConfigurationOverrides } from 'vs/platform/configuration/common/configuration';
 import { ConfigurationScope } from 'vs/platform/configuration/common/configurationRegistry';
 import { IExtensionIdWithVersion } from 'vs/platform/extensionManagement/common/extensionStorage';
@@ -177,6 +178,10 @@ export interface MainThreadSecretStateShape extends IDisposable {
 export interface MainThreadConfigurationShape extends IDisposable {
 	$updateConfigurationOption(target: ConfigurationTarget | null, key: string, value: any, overrides: IConfigurationOverrides | undefined, scopeToLanguage: boolean | undefined): Promise<void>;
 	$removeConfigurationOption(target: ConfigurationTarget | null, key: string, overrides: IConfigurationOverrides | undefined, scopeToLanguage: boolean | undefined): Promise<void>;
+}
+
+export interface MainThreadModelSelectionShape extends IDisposable {
+	$getConfiguration(): Promise<IModelSelectionSettings>;
 }
 
 export interface MainThreadDiagnosticsShape extends IDisposable {
@@ -1710,6 +1715,10 @@ export interface ExtHostConfigurationShape {
 	$acceptConfigurationChanged(data: IConfigurationInitData, change: IConfigurationChange): void;
 }
 
+export interface ExtHostModelSelectionShape {
+	$acceptConfigurationChanged(data: IModelSelectionSettings): void;
+}
+
 export interface ExtHostDiagnosticsShape {
 	$acceptMarkersChange(data: [UriComponents, IMarkerData[]][]): void;
 }
@@ -2884,6 +2893,7 @@ export const MainContext = {
 	MainThreadAiRelatedInformation: createProxyIdentifier<MainThreadAiRelatedInformationShape>('MainThreadAiRelatedInformation'),
 	MainThreadAiEmbeddingVector: createProxyIdentifier<MainThreadAiEmbeddingVectorShape>('MainThreadAiEmbeddingVector'),
 	MainThreadIssueReporter: createProxyIdentifier<MainThreadIssueReporterShape>('MainThreadIssueReporter'),
+	MainThreadModelSelection: createProxyIdentifier<MainThreadModelSelectionShape>('MainThreadModelSelection'),
 };
 
 export const ExtHostContext = {
@@ -2959,4 +2969,5 @@ export const ExtHostContext = {
 	ExtHostTelemetry: createProxyIdentifier<ExtHostTelemetryShape>('ExtHostTelemetry'),
 	ExtHostLocalization: createProxyIdentifier<ExtHostLocalizationShape>('ExtHostLocalization'),
 	ExtHostIssueReporter: createProxyIdentifier<ExtHostIssueReporterShape>('ExtHostIssueReporter'),
+	ExtHostModelSelection: createProxyIdentifier<ExtHostModelSelectionShape>('ExtHostModelSelection'),
 };

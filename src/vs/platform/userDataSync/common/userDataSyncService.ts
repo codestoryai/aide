@@ -33,6 +33,7 @@ import {
 	IUserDataSyncEnablementService, IUserDataSynchroniser, IUserDataSyncLogService, IUserDataSyncService, IUserDataSyncStoreManagementService, IUserDataSyncStoreService,
 	MergeState, SyncResource, SyncStatus, UserDataSyncError, UserDataSyncErrorCode, UserDataSyncStoreError, USER_DATA_SYNC_CONFIGURATION_SCOPE, IUserDataSyncResourceProviderService, IUserDataActivityData, IUserDataSyncLocalStoreService
 } from 'vs/platform/userDataSync/common/userDataSync';
+import { ModelSelectionSynchronizer } from 'vs/platform/userDataSync/common/modelSelectionSync';
 
 type SyncErrorClassification = {
 	owner: 'sandy081';
@@ -668,6 +669,7 @@ class ProfileSynchronizer extends Disposable {
 		switch (syncResource) {
 			case SyncResource.Settings: return this.instantiationService.createInstance(SettingsSynchroniser, this.profile, this.collection);
 			case SyncResource.Keybindings: return this.instantiationService.createInstance(KeybindingsSynchroniser, this.profile, this.collection);
+			case SyncResource.ModelSelection: return this.instantiationService.createInstance(ModelSelectionSynchronizer, this.profile, this.collection);
 			case SyncResource.Snippets: return this.instantiationService.createInstance(SnippetsSynchroniser, this.profile, this.collection);
 			case SyncResource.Tasks: return this.instantiationService.createInstance(TasksSynchroniser, this.profile, this.collection);
 			case SyncResource.GlobalState: return this.instantiationService.createInstance(GlobalStateSynchroniser, this.profile, this.collection);
@@ -833,6 +835,7 @@ class ProfileSynchronizer extends Disposable {
 			case SyncResource.Extensions: return 5;
 			case SyncResource.Profiles: return 6;
 			case SyncResource.WorkspaceState: return 7;
+			case SyncResource.ModelSelection: return 8;
 		}
 	}
 

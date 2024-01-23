@@ -35,6 +35,7 @@ import { IUserDataProfilesService } from 'vs/platform/userDataProfile/common/use
 import { IBrowserWorkbenchEnvironmentService } from 'vs/workbench/services/environment/browser/environmentService';
 import { IUserDataInitializer } from 'vs/workbench/services/userData/browser/userDataInit';
 import { ISecretStorageService } from 'vs/platform/secrets/common/secrets';
+import { ModelSelectionInitializer } from 'vs/platform/userDataSync/common/modelSelectionSync';
 
 export class UserDataSyncInitializer implements IUserDataInitializer {
 
@@ -265,6 +266,7 @@ export class UserDataSyncInitializer implements IUserDataInitializer {
 		switch (syncResource) {
 			case SyncResource.Settings: return new SettingsInitializer(this.fileService, this.userDataProfilesService, this.environmentService, this.logService, this.storageService, this.uriIdentityService);
 			case SyncResource.Keybindings: return new KeybindingsInitializer(this.fileService, this.userDataProfilesService, this.environmentService, this.logService, this.storageService, this.uriIdentityService);
+			case SyncResource.ModelSelection: return new ModelSelectionInitializer(this.fileService, this.userDataProfilesService, this.environmentService, this.logService, this.storageService, this.uriIdentityService);
 			case SyncResource.Tasks: return new TasksInitializer(this.fileService, this.userDataProfilesService, this.environmentService, this.logService, this.storageService, this.uriIdentityService);
 			case SyncResource.Snippets: return new SnippetsInitializer(this.fileService, this.userDataProfilesService, this.environmentService, this.logService, this.storageService, this.uriIdentityService);
 			case SyncResource.GlobalState: return new GlobalStateInitializer(this.storageService, this.fileService, this.userDataProfilesService, this.environmentService, this.logService, this.uriIdentityService);

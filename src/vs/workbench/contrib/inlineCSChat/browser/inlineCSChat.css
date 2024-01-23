@@ -19,6 +19,14 @@
 	margin-top: 6px;
 }
 
+/* header */
+
+.monaco-editor .inline-cschat .header {
+	display: flex !important;
+	justify-content: right;
+	color: var(--vscode-disabledForeground);
+}
+
 /* body */
 
 .monaco-editor .inline-cschat .body {

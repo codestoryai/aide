@@ -20,9 +20,10 @@ import { ConfigurationScope, Extensions, IConfigurationNode, IConfigurationPrope
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { Registry } from 'vs/platform/registry/common/platform';
 import { EditorModel } from 'vs/workbench/common/editor/editorModel';
-import { IFilterMetadata, IFilterResult, IGroupFilter, IKeybindingsEditorModel, ISearchResultGroup, ISetting, ISettingMatch, ISettingMatcher, ISettingsEditorModel, ISettingsGroup, SettingMatchType } from 'vs/workbench/services/preferences/common/preferences';
+import { IFilterMetadata, IFilterResult, IGroupFilter, IKeybindingsEditorModel, IModelSelectionEditorModel, ISearchResultGroup, ISetting, ISettingMatch, ISettingMatcher, ISettingsEditorModel, ISettingsGroup, SettingMatchType } from 'vs/workbench/services/preferences/common/preferences';
 import { FOLDER_SCOPES, WORKSPACE_SCOPES } from 'vs/workbench/services/configuration/common/configuration';
 import { createValidator } from 'vs/workbench/services/preferences/common/preferencesValidation';
+import { IAIModelSelectionService } from 'vs/platform/aiModel/common/aiModels';
 
 export const nullRange: IRange = { startLineNumber: -1, startColumn: -1, endLineNumber: -1, endColumn: -1 };
 function isNullRange(range: IRange): boolean { return range.startLineNumber === -1 && range.startColumn === -1 && range.endLineNumber === -1 && range.endColumn === -1; }
@@ -1171,6 +1172,39 @@ export class DefaultKeybindingsEditorModel implements IKeybindingsEditorModel<an
 	get content(): string {
 		if (!this._content) {
 			this._content = defaultKeybindingsContents(this.keybindingService);
+		}
+		return this._content;
+	}
+
+	getPreference(): any {
+		return null;
+	}
+
+	dispose(): void {
+		// Not disposable
+	}
+}
+
+export function defaultModelSelectionContents(modelSelectionService: IAIModelSelectionService): string {
+	const defaultsHeader = '// ' + nls.localize('defaultModelSelectionHeader', "Override model selection by placing them into your model selection file.");
+	return defaultsHeader + '\n' + modelSelectionService.getDefaultModelSelectionContent();
+}
+
+export class DefaultModelSelectionEditorModel implements IModelSelectionEditorModel<any> {
+
+	private _content: string | undefined;
+
+	constructor(private _uri: URI,
+		@IAIModelSelectionService private readonly aiModelSelectionService: IAIModelSelectionService) {
+	}
+
+	get uri(): URI {
+		return this._uri;
+	}
+
+	get content(): string {
+		if (!this._content) {
+			this._content = defaultModelSelectionContents(this.aiModelSelectionService);
 		}
 		return this._content;
 	}

@@ -69,6 +69,7 @@ import { ICSChatReplyFollowup } from 'vs/workbench/contrib/csChat/common/csChatS
 import { ICSChatAgentService } from 'vs/workbench/contrib/csChat/common/csChatAgents';
 import { ChatFollowups } from 'vs/workbench/contrib/csChat/browser/csChatFollowups';
 import { IAction } from 'vs/base/common/actions';
+import { IAIModelSelectionService } from 'vs/platform/aiModel/common/aiModels';
 
 const defaultAriaLabel = localize('aria-label', "Inline Chat Input");
 
@@ -168,6 +169,7 @@ export class InlineChatWidget implements IInlineChatWidget {
 	private readonly _elements = h(
 		'div.inline-cschat@root',
 		[
+			h('span.header@modelHeader'),
 			h('div.body', [
 				h('div.content@content', [
 					h('div.input@input', [
@@ -261,6 +263,7 @@ export class InlineChatWidget implements IInlineChatWidget {
 		@ILogService private readonly _logService: ILogService,
 		@ITextModelService private readonly _textModelResolverService: ITextModelService,
 		@ICSChatAgentService private readonly _chatAgentService: ICSChatAgentService,
+		@IAIModelSelectionService private readonly _aiModelSelectionService: IAIModelSelectionService,
 	) {
 
 		// input editor logic
@@ -312,6 +315,9 @@ export class InlineChatWidget implements IInlineChatWidget {
 		this._ctxInnerCursorEnd = CTX_INLINE_CHAT_INNER_CURSOR_END.bindTo(this._contextKeyService);
 		this._ctxInputEditorFocused = CTX_INLINE_CHAT_FOCUSED.bindTo(this._contextKeyService);
 		this._ctxResponseFocused = CTX_INLINE_CHAT_RESPONSE_FOCUSED.bindTo(this._contextKeyService);
+
+		this._elements.modelHeader.style.display = 'none';
+		this._store.add(this._aiModelSelectionService.onDidChangeModelSelection(() => this.renderModelName()));
 
 		// (1) inner cursor position (last/first line selected)
 		const updateInnerCursorFirstLast = () => {
@@ -939,6 +945,16 @@ export class InlineChatWidget implements IInlineChatWidget {
 		this._slashCommands.add(this._inputEditor.onDidChangeModelContent(updateSlashDecorations));
 		updateSlashDecorations();
 	}
+
+	async renderModelName(): Promise<void> {
+		const modelSelectionSettings = await this._aiModelSelectionService.getValidatedModelSelectionSettings();
+		if (modelSelectionSettings) {
+			this._elements.modelHeader.innerText = modelSelectionSettings.models[modelSelectionSettings.fastModel].name;
+			this._elements.modelHeader.style.display = 'block';
+		} else {
+			this._elements.modelHeader.style.display = 'none';
+		}
+	}
 }
 
 export class InlineChatZoneWidget extends ZoneWidget {
@@ -1036,6 +1052,7 @@ export class InlineChatZoneWidget extends ZoneWidget {
 	override show(position: Position): void {
 		super.show(position, this._computeHeightInLines());
 		this.widget.focus();
+		this.widget.renderModelName();
 		this._ctxVisible.set(true);
 	}
 

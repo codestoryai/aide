@@ -47,6 +47,7 @@ import { ICSChatAgentService } from 'vs/workbench/contrib/csChat/common/csChatAg
 import { ChatSubmitEditorAction, ChatSubmitSecondaryAgentEditorAction } from 'vs/workbench/contrib/csChat/browser/actions/csChatActions';
 import { chatAgentLeader } from 'vs/workbench/contrib/csChat/common/csChatParserTypes';
 import { IPosition } from 'vs/editor/common/core/position';
+import { IAIModelSelectionService } from 'vs/platform/aiModel/common/aiModels';
 
 const $ = dom.$;
 
@@ -76,6 +77,7 @@ export class ChatInputPart extends Disposable implements IHistoryNavigationWidge
 	private container!: HTMLElement;
 
 	private requesterContainer!: HTMLElement;
+	private modelNameContainer!: HTMLElement;
 	private followupsContainer!: HTMLElement;
 	private followupsDisposables = this._register(new DisposableStore());
 
@@ -113,6 +115,7 @@ export class ChatInputPart extends Disposable implements IHistoryNavigationWidge
 		@IKeybindingService private readonly keybindingService: IKeybindingService,
 		@IAccessibilityService private readonly accessibilityService: IAccessibilityService,
 		@ILanguageService private readonly _languageService: ILanguageService,
+		@IAIModelSelectionService private readonly _aiModelSelectionService: IAIModelSelectionService,
 	) {
 		super();
 
@@ -126,6 +129,7 @@ export class ChatInputPart extends Disposable implements IHistoryNavigationWidge
 				this.inputEditor.updateOptions({ ariaLabel: this._getAriaLabel() });
 			}
 		}));
+		this._register(this._aiModelSelectionService.onDidChangeModelSelection(() => this._renderModelName()));
 	}
 
 	private _getAriaLabel(): string {
@@ -150,6 +154,7 @@ export class ChatInputPart extends Disposable implements IHistoryNavigationWidge
 			this.setValue(inputValue);
 		}
 		this._renderRequester(requester);
+		this._renderModelName();
 	}
 
 	get element(): HTMLElement {
@@ -235,9 +240,13 @@ export class ChatInputPart extends Disposable implements IHistoryNavigationWidge
 		this.followupsContainer = dom.append(this.container, $('.interactive-input-followups'));
 		const header = dom.append(this.container, $('.header'));
 		const user = dom.append(header, $('.user'));
+		const model = dom.append(header, $('.slow-model'));
 		dom.append(user, $('.avatar-container'));
 		dom.append(user, $('h3.username'));
 		this.requesterContainer = user;
+		this.modelNameContainer = model;
+		this.modelNameContainer.style.display = 'none';
+
 		const inputAndSideToolbar = dom.append(this.container, $('.cschat-input-and-side-toolbar'));
 		const inputContainer = dom.append(inputAndSideToolbar, $('.cschat-input-and-execute-toolbar'));
 
@@ -362,6 +371,18 @@ export class ChatInputPart extends Disposable implements IHistoryNavigationWidge
 			const defaultIcon = Codicon.account;
 			const avatarIcon = dom.$(ThemeIcon.asCSSSelector(defaultIcon));
 			avatarContainer.replaceChildren(dom.$('.avatar.codicon-avatar', undefined, avatarIcon));
+		}
+	}
+
+	private async _renderModelName(): Promise<void> {
+		const modelSelectionSettings = await this._aiModelSelectionService.getValidatedModelSelectionSettings();
+		const modelName = modelSelectionSettings.models[modelSelectionSettings.slowModel].name;
+
+		if (modelName) {
+			this.modelNameContainer.textContent = modelName;
+			this.modelNameContainer.style.display = 'block';
+		} else {
+			this.modelNameContainer.style.display = 'none';
 		}
 	}
 

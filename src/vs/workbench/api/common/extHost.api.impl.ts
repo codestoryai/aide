@@ -67,6 +67,7 @@ import { ExtHostLanguages } from 'vs/workbench/api/common/extHostLanguages';
 import { IExtHostLocalizationService } from 'vs/workbench/api/common/extHostLocalizationService';
 import { IExtHostManagedSockets } from 'vs/workbench/api/common/extHostManagedSockets';
 import { ExtHostMessageService } from 'vs/workbench/api/common/extHostMessageService';
+import { ExtHostModelSelection } from 'vs/workbench/api/common/extHostModelSelection';
 import { ExtHostNotebookController } from 'vs/workbench/api/common/extHostNotebook';
 import { ExtHostNotebookDocumentSaveParticipant } from 'vs/workbench/api/common/extHostNotebookDocumentSaveParticipant';
 import { ExtHostNotebookDocuments } from 'vs/workbench/api/common/extHostNotebookDocuments';
@@ -226,6 +227,7 @@ export function createApiFactoryAndRegisterActors(accessor: ServicesAccessor): I
 	const extHostIssueReporter = rpcProtocol.set(ExtHostContext.ExtHostIssueReporter, new ExtHostIssueReporter(rpcProtocol));
 	const extHostStatusBar = rpcProtocol.set(ExtHostContext.ExtHostStatusBar, new ExtHostStatusBar(rpcProtocol, extHostCommands.converter));
 	const extHostSpeech = rpcProtocol.set(ExtHostContext.ExtHostSpeech, new ExtHostSpeech(rpcProtocol));
+	const extHostModelSelection = rpcProtocol.set(ExtHostContext.ExtHostModelSelection, new ExtHostModelSelection(rpcProtocol));
 
 	// Check that no named customers are missing
 	const expected = Object.values<ProxyIdentifier<any>>(ExtHostContext);
@@ -1469,6 +1471,18 @@ export function createApiFactoryAndRegisterActors(accessor: ServicesAccessor): I
 			}
 		};
 
+		// namespace modelSelection
+		const modelSelection: typeof vscode.modelSelection = {
+			async getConfiguration() {
+				checkProposedApiEnabled(extension, 'modelSelection');
+				return extHostModelSelection.getConfiguration();
+			},
+			onDidChangeConfiguration(listener, thisArgs?, disposables?) {
+				checkProposedApiEnabled(extension, 'modelSelection');
+				return extHostModelSelection.onModelSelectionChange(listener, thisArgs, disposables);
+			}
+		};
+
 		return <typeof vscode>{
 			version: initData.version,
 			// namespaces
@@ -1476,6 +1490,7 @@ export function createApiFactoryAndRegisterActors(accessor: ServicesAccessor): I
 			authentication,
 			commands,
 			comments,
+			modelSelection,
 			chat,
 			debug,
 			env,

@@ -21,6 +21,7 @@ import { ProjectContext } from '../utilities/workspaceContext';
 import { AdjustedLineContent, AnswerSplitOnNewLineAccumulator, AnswerStreamContext, AnswerStreamLine, LineContent, LineIndentManager, StateEnum } from './reportEditorSessionAnswerStream';
 import { IndentStyleSpaces, IndentationHelper } from './editorSessionProvider';
 import { InLineAgentContextSelection } from '../sidecar/types';
+import { getUniqueId } from '../utilities/uniqueId';
 
 class CSChatParticipant implements vscode.CSChatSessionParticipantInformation {
 	name: string;
@@ -254,7 +255,7 @@ export class CSChatSessionProvider implements vscode.CSChatSessionProvider<CSCha
 			'aide-agent.png'
 		);
 		return new CSChatSession(
-			new CSChatParticipant('You', userUri),
+			new CSChatParticipant(getUniqueId(), userUri),
 			new CSChatParticipant('Aide', agentUri),
 			'',
 			'Try using /, # or @ to find specific commands',

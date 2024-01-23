@@ -55,6 +55,7 @@ export function getSyncAreaLabel(source: SyncResource): string {
 	switch (source) {
 		case SyncResource.Settings: return localize('settings', "Settings");
 		case SyncResource.Keybindings: return localize('keybindings', "Keyboard Shortcuts");
+		case SyncResource.ModelSelection: return localize('modelSelection', "Model Selection");
 		case SyncResource.Snippets: return localize('snippets', "User Snippets");
 		case SyncResource.Tasks: return localize('tasks', "User Tasks");
 		case SyncResource.Extensions: return localize('extensions', "Extensions");

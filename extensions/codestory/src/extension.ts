@@ -2,7 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import { commands, ExtensionContext, csChat, TextDocument, window, workspace, languages } from 'vscode';
+import { commands, ExtensionContext, csChat, TextDocument, window, workspace, languages, modelSelection } from 'vscode';
 import { EventEmitter } from 'events';
 import winston from 'winston';
 
@@ -22,7 +22,7 @@ import { activateExtensions, getExtensionsInDirectory } from './utilities/activa
 import { ActiveFilesTracker } from './activeChanges/activeFilesTracker';
 import { CodeSymbolInformationEmbeddings } from './utilities/types';
 import { CodeSymbolsLanguageCollection } from './languages/codeSymbolsLanguageCollection';
-import { getUniqueId } from './utilities/uniqueId';
+import { getUniqueId, getUserId } from './utilities/uniqueId';
 import { readCustomSystemInstruction } from './utilities/systemInstruction';
 import { RepoRef, RepoRefBackend, SideCarClient } from './sidecar/client';
 import { startSidecarBinary } from './utilities/setupSidecarBinary';
@@ -69,10 +69,10 @@ class ProgressiveTrackSymbols {
 
 export async function activate(context: ExtensionContext) {
 	// Project root here
-	const uniqueUserId = await getUniqueId();
+	const uniqueUserId = getUniqueId();
 	logger.info(`[CodeStory]: ${uniqueUserId} Activating extension with storage: ${context.globalStorageUri}`);
 	postHogClient.capture({
-		distinctId: await getUniqueId(),
+		distinctId: getUniqueId(),
 		event: 'extension_activated',
 	});
 	let rootPath = workspace.rootPath;
@@ -85,7 +85,7 @@ export async function activate(context: ExtensionContext) {
 	}
 	const agentSystemInstruction = readCustomSystemInstruction();
 	if (agentSystemInstruction === null) {
-		window.showInformationMessage(
+		console.log(
 			'Aide can help you better if you give it custom instructions by going to your settings and setting it in aide.systemInstruction (search for this string in User Settings) and reload vscode for this to take effect by doing Cmd+Shift+P: Developer: Reload Window'
 		);
 	}
@@ -105,7 +105,6 @@ export async function activate(context: ExtensionContext) {
 	// upto
 	const projectContext = new ProjectContext();
 	await projectContext.collectContext();
-	const projectLabels = projectContext.labels;
 
 	// TODO(codestory): Download the rust binary here appropriate for the platform
 	// we are on. Similar to how we were doing for Aide binary
@@ -119,17 +118,26 @@ export async function activate(context: ExtensionContext) {
 		}
 	});
 
+	// Get model selection configuration
+	const modelConfiguration = await modelSelection.getConfiguration();
+	console.log('Model configuration:' + JSON.stringify(modelConfiguration));
+
 	// Setup the sidecar client here
 	const sidecarUrl = await startSidecarBinary(context.globalStorageUri.fsPath);
 	// allow-any-unicode-next-line
 	window.showInformationMessage(`Sidecar binary 🦀 started at ${sidecarUrl}`);
-	const sidecarClient = new SideCarClient(sidecarUrl, openAIKey);
+	const sidecarClient = new SideCarClient(sidecarUrl, openAIKey, modelConfiguration);
 	// Setup the current repo representation here
 	const currentRepo = new RepoRef(
 		// We assume the root-path is the one we are interested in
 		rootPath,
 		RepoRefBackend.local,
 	);
+	// setup the callback for the model configuration
+	modelSelection.onDidChangeConfiguration((config) => {
+		sidecarClient.updateModelConfiguration(config);
+		console.log('Model configuration updated:' + JSON.stringify(config));
+	});
 	await sidecarClient.indexRepositoryIfNotInvoked(currentRepo);
 	// Show the indexing percentage on startup
 	await reportIndexingPercentage(sidecarClient, currentRepo);

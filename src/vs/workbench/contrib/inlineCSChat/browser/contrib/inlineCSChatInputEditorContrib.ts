@@ -196,7 +196,8 @@ class BuiltinSymbolCompletions extends Disposable {
 					return null;
 				}
 
-				const editorSymbolPicks = await this.workspaceSymbolsQuickAccess.getSymbolPicks('', undefined, _token);
+				const query = varWord ? varWord.word.substring(1) : '';
+				const editorSymbolPicks = await this.workspaceSymbolsQuickAccess.getSymbolPicks(query, undefined, _token);
 
 				const insertAndReplaceRange = new Range(position.lineNumber, position.column, position.lineNumber, position.column);
 				const range = new Range(position.lineNumber, position.column - (varWord ? varWord.word.length : 0), position.lineNumber, position.column);
@@ -213,8 +214,8 @@ class BuiltinSymbolCompletions extends Disposable {
 					};
 				});
 
-
 				return <CompletionList>{
+					incomplete: true,
 					suggestions: completionItems
 				};
 			},

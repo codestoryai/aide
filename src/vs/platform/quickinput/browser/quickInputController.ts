@@ -23,6 +23,7 @@ import { QuickInputUI, Writeable, IQuickInputStyles, IQuickInputOptions, QuickPi
 import { ILayoutService } from 'vs/platform/layout/browser/layoutService';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { mainWindow } from 'vs/base/browser/window';
+import { isDark } from 'vs/platform/theme/common/theme';
 
 const $ = dom.$;
 
@@ -706,7 +707,8 @@ export class QuickInputController extends Disposable {
 			} = this.styles.widget;
 			this.ui.titleBar.style.backgroundColor = quickInputTitleBackground ?? '';
 			this.ui.container.style.backgroundColor = quickInputBackground ?? '';
-			this.ui.container.style.backdropFilter = 'blur(32px)';
+			this.ui.container.style.backdropFilter = isDark(this.themeService.getColorTheme().type)
+				? 'blur(20px) saturate(190%) contrast(70%) brightness(80%)' : 'blur(25px) saturate(190%) contrast(50%) brightness(130%)';
 			this.ui.container.style.color = quickInputForeground ?? '';
 			this.ui.container.style.border = widgetBorder ? `2px solid ${widgetBorder}` : '';
 			this.ui.container.style.boxShadow = widgetShadow ? `0 0 8px 2px ${widgetShadow}` : '';

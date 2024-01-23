@@ -157,6 +157,7 @@ suite('Edit session sync', () => {
 				globalStorageHome: URI.file('globalStorageHome'),
 				settingsResource: URI.file('settingsResource'),
 				keybindingsResource: URI.file('keybindingsResource'),
+				modelSelectionResource: URI.file('modelSelectionResource'),
 				tasksResource: URI.file('tasksResource'),
 				snippetsHome: URI.file('snippetsHome'),
 				extensionsResource: URI.file('extensionsResource'),

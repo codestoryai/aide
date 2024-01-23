@@ -48,6 +48,7 @@
           "launch.json",
           "tasks.json",
           "keybindings.json",
+          "modelSelection.json",
           "extensions.json",
           "argv.json",
           "profiles.json",
@@ -73,6 +74,18 @@
       {
         "fileMatch": "%APP_SETTINGS_HOME%/profiles/*/keybindings.json",
         "url": "vscode://schemas/keybindings"
+      },
+      {
+        "fileMatch": "vscode://defaultsettings/modelSelection.json",
+        "url": "vscode://schemas/modelSelection"
+      },
+      {
+        "fileMatch": "%APP_SETTINGS_HOME%/modelSelection.json",
+        "url": "vscode://schemas/modelSelection"
+      },
+      {
+        "fileMatch": "%APP_SETTINGS_HOME%/profiles/*/modelSelection.json",
+        "url": "vscode://schemas/modelSelection"
       },
       {
         "fileMatch": "vscode://defaultsettings/*.json",

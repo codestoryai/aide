@@ -8,9 +8,9 @@
 // we won't capture a unique-id.
 
 
-import { networkInterfaces } from 'os';
 import * as uuid from 'uuid';
 import * as vscode from 'vscode';
+import * as os from 'os';
 
 const invalidMacAddresses = new Set([
 	'00:00:00:00:00:00',
@@ -24,7 +24,7 @@ function validateMacAddress(candidate: string): boolean {
 }
 
 export function getMac(): string {
-	const ifaces = networkInterfaces();
+	const ifaces = os.networkInterfaces();
 	for (const name in ifaces) {
 		const networkInterface = ifaces[name];
 		if (networkInterface) {
@@ -64,12 +64,20 @@ async function getMacMachineId(): Promise<string | undefined> {
 }
 
 
-export async function getUniqueId(): Promise<string> {
-	const codestoryConfiguration = vscode.workspace.getConfiguration('codestory');
-	const disableTelemetry = codestoryConfiguration.get('disableTelemetry');
-	if (disableTelemetry) {
-		return 'disabled-telemetry';
-	} else {
-		return await getMachineId();
+export function getUniqueId(): string {
+	try {
+		const codestoryConfiguration = vscode.workspace.getConfiguration('codestory');
+		const disableTelemetry = codestoryConfiguration.get('disableTelemetry');
+		if (disableTelemetry) {
+			return 'disabled-telemetry';
+		} else {
+			return getUserId();
+		}
+	} catch (err) {
+		return 'You';
 	}
+}
+
+export function getUserId(): string {
+	return os.userInfo().username;
 }

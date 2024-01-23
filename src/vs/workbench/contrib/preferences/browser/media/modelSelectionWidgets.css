@@ -1,0 +1,175 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.edit-model-widget {
+	position: absolute;
+	z-index: 2540;
+	-webkit-app-region: no-drag;
+	border-radius: 6px;
+	padding: 12px;
+	transform-origin: top;
+	animation: openPopup 150ms;
+
+	&[style*="display: none;"] {
+		display: block !important;
+		transform-origin: top;
+		animation: closePopup 150ms;
+		opacity: 0;
+		transform: scaleY(0);
+		pointer-events: none;
+	}
+}
+
+.edit-model-widget-content .edit-model-widget-header {
+	display: flex;
+	justify-content: space-between;
+	line-height: 22px;
+}
+
+.edit-model-widget-content .edit-model-widget-header .message {
+	color: var(--vscode-disabledForeground);
+	font-family: var(--monaco-monospace-font);
+	font-size: 90%;
+}
+
+.edit-model-widget-content .edit-model-widget-header .codicon,
+.edit-model-widget-content .edit-model-widget-body .edit-model-widget-model-name-container .codicon {
+	display: flex;
+	align-items: center;
+	width: 22px;
+	height: 22px;
+}
+
+.edit-model-widget-content .edit-model-widget-header .codicon:before,
+.edit-model-widget-content .edit-model-widget-body .edit-model-widget-model-name-container .codicon:before {
+	font-size: 22px;
+}
+
+.edit-model-widget-content .edit-model-widget-header .codicon:hover {
+	cursor: pointer;
+	background-color: var(--vscode-editor-hoverHighlightBackground);
+}
+
+.edit-model-widget-content .edit-model-widget-body {
+	padding: 6px 0;
+}
+
+.edit-model-widget-content .edit-model-widget-body .edit-model-widget-model-name-container {
+	display: flex;
+	align-items: center;
+	padding: 6px 4px;
+	border: 1px solid var(--vscode-commandCenter-border);
+	border-radius: 3px;
+	margin: 6px 0 24px 0;
+}
+
+.edit-model-widget-content .edit-model-widget-body .edit-model-widget-model-name {
+	display: block;
+	padding-left: 4px;
+	font-size: 1.17em;
+	font-weight: bold;
+}
+
+.edit-model-widget-content .edit-model-widget-body .edit-model-widget-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	align-items: center;
+	gap: 16px;
+}
+
+.edit-model-widget-content .edit-model-widget-body .edit-model-widget-grid .subtitle {
+	color: var(--vscode-disabledForeground);
+	font-size: 90%;
+	display: block;
+}
+
+.edit-model-widget-content .edit-model-widget-body .monaco-list {
+	height: 200px;
+}
+
+.edit-model-widget-content .edit-model-widget-body .monaco-select-box {
+	min-width: 100px;
+	min-height: 18px;
+	padding: 4px 20px 4px 8px;
+}
+
+.edit-model-widget-temperature.monaco-inputbox {
+	color: unset;
+	background-color: unset !important;
+	border: unset !important;
+	left: -2px;
+}
+
+.edit-model-widget-grid .monaco-inputbox .validation-message {
+	width: 200px;
+}
+
+.edit-model-widget-grid .monaco-inputbox input[type=number]::-webkit-inner-spin-button {
+	/* Hide arrow button that shows in type=number fields */
+	-webkit-appearance: none !important;
+}
+
+.edit-model-widget-grid .monaco-inputbox input[type=number] {
+	/* Hide arrow button that shows in type=number fields */
+	-moz-appearance: textfield !important;
+	appearance: textfield !important;
+}
+
+.edit-model-widget-grid .monaco-inputbox input {
+	background-color: var(--vscode-dropdown-background) !important;
+}
+
+.edit-model-widget-temperature-container {
+	line-height: 1;
+}
+
+/* Style the range input */
+/*********** Baseline, reset styles ***********/
+.edit-model-widget-temperature.monaco-inputbox input[type="range"] {
+	-webkit-appearance: none;
+	padding: 0 !important;
+	appearance: none;
+	background: transparent;
+	cursor: pointer;
+}
+
+/* Removes default focus */
+.edit-model-widget-temperature.monaco-inputbox input[type="range"]:focus {
+	outline: none;
+}
+
+/* slider track */
+.edit-model-widget-temperature.monaco-inputbox input[type="range"]::-webkit-slider-runnable-track {
+	background-color: var(--vscode-commandCenter-border);
+	border-radius: 0.5rem;
+	height: 4px;
+}
+
+/* slider thumb */
+.edit-model-widget-temperature.monaco-inputbox input[type="range"]::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	/* Override default look */
+	appearance: none;
+	margin-top: -4px;
+	/* Centers thumb on the track */
+	background-color: var(--vscode-editor-foreground);
+	border-radius: 8px;
+	height: 12px;
+	width: 12px;
+}
+
+.edit-model-widget-temperature.monaco-inputbox input[type="range"]:focus::-webkit-slider-thumb {
+	outline: 3px solid var(--vscode-focusBorder);
+	outline-offset: 0.125rem;
+}
+
+/* Footer */
+.edit-model-widget-content .edit-model-widget-footer {
+	display: flex;
+	justify-content: flex-end;
+	gap: 12px;
+	margin-left: 40%;
+	margin-top: 24px;
+}

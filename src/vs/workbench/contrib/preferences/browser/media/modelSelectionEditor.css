@@ -1,0 +1,278 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.model-selection-editor {
+	padding: 11px 0px 0px 27px;
+}
+
+/* header styling */
+
+.model-selection-editor > .model-selection-header {
+	padding-top: 28px;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+	justify-items: center;
+	align-items: center;
+	gap: 0 20px;
+	margin: 0 20%;
+}
+
+.model-selection-editor > .model-selection-header .model-select-dropdown {
+	display: flex;
+	width: 300px;
+	text-wrap: nowrap;
+	gap: 20px;
+	padding: 4px 0;
+	align-items: center;
+}
+
+.model-selection-editor > .model-selection-header .model-select-dropdown .monaco-select-box {
+	min-width: 100px;
+	min-height: 18px;
+	padding: 2px 20px 2px 8px;
+}
+
+.model-selection-editor .monaco-action-bar .action-item .monaco-custom-toggle {
+	margin: 0;
+	padding: 2px;
+}
+
+.model-selection-editor .monaco-action-bar .action-item > .codicon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: inherit;
+	box-sizing: content-box;
+}
+
+/** Table styling **/
+
+.model-selection-editor > .model-selection-body .table-container {
+	width: 100%;
+	border-spacing: 0;
+	border-collapse: separate;
+	padding-top: 36px;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-tr {
+	cursor: default;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-tr .monaco-table-td {
+	align-items: center;
+	display: flex;
+	overflow: hidden;
+}
+
+/** Actions column styling **/
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-tr .monaco-table-td .actions .monaco-action-bar {
+	display: none;
+	flex: 1;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-list-row.selected .monaco-table-tr .monaco-table-td .actions .monaco-action-bar,
+.model-selection-editor > .model-selection-body > .table-container .monaco-table.focused .monaco-list-row.focused .monaco-table-tr .monaco-table-td .actions .monaco-action-bar,
+.model-selection-editor > .model-selection-body > .table-container .monaco-list-row:hover .monaco-table-tr .monaco-table-td .actions .monaco-action-bar {
+	display: flex;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-tr .monaco-table-td .monaco-action-bar .action-item > .icon {
+	width:16px;
+	height: 16px;
+	cursor: pointer;
+	margin-top: 3px;
+}
+
+/** columns styling **/
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-tr .monaco-table-td .hide {
+	display: none;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-tr .monaco-table-td .code {
+	font-family: var(--monaco-monospace-font);
+	font-size: 90%;
+	display: flex;
+	overflow: hidden;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-tr .monaco-table-td .code.strong {
+	padding: 1px 4px;
+	background-color: rgba(128, 128, 128, 0.17);
+	border-radius: 4px;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-tr .monaco-table-td .highlight {
+	font-weight: bold;
+	color: var(--vscode-list-highlightForeground);
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table.focused .monaco-list-row.selected .monaco-table-td .highlight,
+.model-selection-editor > .model-selection-body > .table-container .monaco-table.focused .monaco-list-row.selected.focused .monaco-table-td .highlight {
+	color: inherit;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table .monaco-list-row[data-parity=odd]:not(.focused):not(.selected):not(:hover) .monaco-table-tr,
+.model-selection-editor > .model-selection-body > .table-container .monaco-table .monaco-list:not(:focus) .monaco-list-row[data-parity=odd].focused:not(.selected):not(:hover) .monaco-table-tr,
+.model-selection-editor > .model-selection-body > .table-container .monaco-table .monaco-list:not(.focused) .monaco-list-row[data-parity=odd].focused:not(.selected):not(:hover) .monaco-table-tr {
+	background-color: var(--vscode-keybindingTable-rowsBackground);
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table .monaco-list-row .default-label {
+	opacity: 0.5;
+	font-style: italic;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-th {
+	background-color: var(--vscode-keybindingTable-headerBackground);
+}
+
+.model-selection-editor .monaco-table-th,
+.model-selection-editor .monaco-table-td {
+	padding-left: 10px;
+}
+
+.model-selection-editor .monaco-table-th[data-col-index="0"],
+.model-selection-editor .monaco-table-td[data-col-index="0"] {
+	padding-left: 20px;
+}
+
+/** model column styling **/
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-td .model {
+	display: flex;
+	flex-direction: row;
+	gap: 12px;
+	align-items: center;
+	justify-content: center;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-td .model .codicon {
+	display: flex;
+	align-items: center;
+	width: 22px;
+	height: 22px;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-td .model .codicon:before {
+	font-size: 22px;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-td .model .codicon.codicon-default-model-icon:before {
+	color: var(--vscode-charts-green);
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-td .model .codicon.codicon-invalid-model-config-icon:before {
+	color: var(--vscode-editorWarning-foreground);
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-td .model-label-container {
+	display: flex;
+	flex-direction: column;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-td .model-label-container span.monaco-highlighted-label {
+	font-weight: bold;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-td .model-label-container span:not(.monaco-highlighted-label) {
+	color: var(--vscode-disabledForeground);
+	font-family: var(--monaco-monospace-font);
+	font-size: 90%;
+}
+
+/** provider column styling **/
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-td .provider {
+	display: flex;
+	gap: 12px;
+	align-items: center;
+	justify-content: center;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-td .provider-logo.codestory {
+	background-image: url('logos/codestory.svg');
+	background-size: contain;
+	background-repeat: no-repeat;
+	background-position: center;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-td .provider-logo.openai-default {
+	mask-image: url('logos/openai-default.svg');
+	-webkit-mask-image: url('logos/openai-default.svg');
+	mask-size: contain;
+	-webkit-mask-size: contain;
+	mask-repeat: no-repeat;
+	-webkit-mask-repeat: no-repeat;
+	mask-position: center;
+	-webkit-mask-position: center;
+	background-color: currentColor;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-td .provider-logo.azure-openai {
+	background-image: url('logos/azure-openai.svg');
+	background-size: contain;
+	background-repeat: no-repeat;
+	background-position: center;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-td .provider-logo.togetherai {
+	background-image: url('logos/togetherai.svg');
+	background-size: contain;
+	background-repeat: no-repeat;
+	background-position: center;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-td .provider-logo.ollama {
+	mask-image: url('logos/ollama.svg');
+	-webkit-mask-image: url('logos/ollama.svg');
+	mask-size: contain;
+	-webkit-mask-size: contain;
+	mask-repeat: no-repeat;
+	-webkit-mask-repeat: no-repeat;
+	mask-position: center;
+	-webkit-mask-position: center;
+	background-color: currentColor;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-td .provider-logo {
+	display: block;
+	width: 24px;
+	height: 24px;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-td .provider-label {
+	display: flex;
+	flex-direction: column;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-td .provider-label span.monaco-highlighted-label {
+	font-weight: bold;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-td .provider-label span:not(.monaco-highlighted-label) {
+	color: var(--vscode-disabledForeground);
+	font-family: var(--monaco-monospace-font);
+	font-size: 90%;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-td .provider-config-container {
+	line-height: 1.2rem;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-td .provider-config-key {
+	color: var(--vscode-disabledForeground);
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-td .provider-config-value.incomplete {
+	color: var(--vscode-editorWarning-foreground);
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-td .provider-config-complete {
+	color: var(--vscode-charts-green);
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-td .provider-config-incomplete {
+	color: var(--vscode-editorWarning-foreground);
+}
