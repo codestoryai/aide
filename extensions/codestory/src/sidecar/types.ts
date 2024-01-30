@@ -282,6 +282,7 @@ export type InLineAgentMessageState =
 	| 'Errored';
 
 export type InLineAgentLLMType =
+	| 'CodeLLama70BInstruct'
 	| 'MistralInstruct'
 	| 'Mixtral'
 	| 'Gpt4'
@@ -410,7 +411,7 @@ export type EditFileResponse =
 					character: number;
 				};
 			}; content: string; previous_content: string;
-		}
+		};
 	}
 	| {
 		TextEdit: {
@@ -425,9 +426,9 @@ export type EditFileResponse =
 				};
 			}; content: string;
 			should_insert: boolean;
-		}
+		};
 	}
-	| { Status: { session_id: string, status: string } }
+	| { Status: { session_id: string; status: string } }
 	| { TextEditStreaming: { data: TextEditStreaming } };
 
 export type SyncUpdate =
@@ -447,6 +448,7 @@ export type ProgressEvent =
 export enum LLMType {
 	Mixtral,
 	MistralInstruct,
+	CodeLLama70BInstruct,
 	Gpt4,
 	GPT3_5_16k,
 	Gpt4_32k,
@@ -454,9 +456,9 @@ export enum LLMType {
 }
 
 export type CustomLLMType = {
-	kind: "Custom";
+	kind: 'Custom';
 	value: string;
-}
+};
 
 export type LLMTypeVariant = LLMType | CustomLLMType;
 
@@ -492,7 +494,7 @@ export async function getSideCarModelConfiguration(modelSelection: ModelSelectio
 	const slowModel = modelSelection.slowModel;
 	const fastModel = modelSelection.fastModel;
 	const models = modelSelection.models;
-	let modelRecord = {};
+	const modelRecord = {};
 	for (const [key, value] of Object.entries(models)) {
 		const modelConfiguration = {
 			context_length: value.contextLength,
@@ -501,7 +503,7 @@ export async function getSideCarModelConfiguration(modelSelection: ModelSelectio
 		};
 		// @ts-ignore
 		modelRecord[key] = modelConfiguration;
-		console.log("modelRecord");
+		console.log('modelRecord');
 		console.log(modelConfiguration);
 		console.log(modelRecord);
 	}
@@ -514,70 +516,70 @@ export async function getSideCarModelConfiguration(modelSelection: ModelSelectio
 		}
 	}
 	return {
-		"slow_model": slowModel,
-		"fast_model": fastModel,
-		"models": modelRecord,
-		"providers": finalProviders,
+		'slow_model': slowModel,
+		'fast_model': fastModel,
+		'models': modelRecord,
+		'providers': finalProviders,
 	};
 }
 
 // The various types are present in aiModels.ts
 function getProviderconfiguration(type: string, value: ModelProviderConfiguration) {
-	if (type == "openai-default") {
+	if (type === 'openai-default') {
 		return {
-			"OpenAI": {
-				"api_key": value.apiKey,
+			'OpenAI': {
+				'api_key': value.apiKey,
 			}
 		};
 	}
-	if (type == "azure-openai") {
+	if (type === 'azure-openai') {
 		return {
-			"OpenAIAzureConfig": {
-				"deployment_id": "",
-				"api_base": value.apiBase,
-				"api_key": value.apiKey,
+			'OpenAIAzureConfig': {
+				'deployment_id': '',
+				'api_base': value.apiBase,
+				'api_key': value.apiKey,
 				// TODO(skcd): Fix the hardcoding of api version here, this will
 				// probably come from the api version in azure config
-				"api_version": "2023-08-01-preview",
+				'api_version': '2023-08-01-preview',
 			}
 		};
 	}
-	if (type == "togetherai") {
+	if (type === 'togetherai') {
 		return {
-			"TogetherAI": {
-				"api_key": value.apiKey,
+			'TogetherAI': {
+				'api_key': value.apiKey,
 			}
 		};
 	}
-	if (type == "ollama") {
+	if (type === 'ollama') {
 		return {
-			"Ollama": {}
+			'Ollama': {}
 		};
 	}
 	return null;
 }
 
 function getModelProviderConfiguration(providerConfiguration: ProviderSpecificConfiguration, llmType: string) {
-	if (providerConfiguration.type == "openai-default") {
-		return "OpenAI";
+	if (providerConfiguration.type === 'openai-default') {
+		return 'OpenAI';
 	}
-	if (providerConfiguration.type == "azure-openai") {
+	if (providerConfiguration.type === 'azure-openai') {
 		return {
-			"Azure": {
-				"deployment_id": providerConfiguration.deploymentID,
+			'Azure': {
+				'deployment_id': providerConfiguration.deploymentID,
 			}
 		};
 	}
-	if (providerConfiguration.type == "togetherai") {
-		return "TogetherAI";
+	if (providerConfiguration.type === 'togetherai') {
+		return 'TogetherAI';
 	}
-	if (providerConfiguration.type == "ollama") {
-		return "Ollama";
+	if (providerConfiguration.type === 'ollama') {
+		return 'Ollama';
 	}
-	if (providerConfiguration.type == "codestory") {
+	if (providerConfiguration.type === 'codestory') {
 		return {
-			"CodeStory": {
-				"llm_type": llmType,
+			'CodeStory': {
+				'llm_type': llmType,
 			}
 		};
 	}

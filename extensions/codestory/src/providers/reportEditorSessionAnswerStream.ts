@@ -90,7 +90,7 @@ export const reportFromStreamToEditorSessionProgress = async (
 						progress.report(CSInteractiveEditorProgressItem.documentationGeneration());
 						continue;
 					}
-					if (lastStep === 'Edit' || lastStep == 'Code') {
+					if (lastStep === 'Edit' || lastStep === 'Code') {
 						skillUsed = 'Edit';
 						progress.report(CSInteractiveEditorProgressItem.editGeneration());
 						continue;
@@ -134,7 +134,7 @@ export const reportFromStreamToEditorSessionProgress = async (
 				// one and then apply it to the editor
 				generatedAnswer = inlineAgentMessage.answer;
 			}
-			if (skillUsed === 'Edit' || skillUsed == 'Doc') {
+			if (skillUsed === 'Edit' || skillUsed === 'Doc') {
 				// we first add the delta
 				answerSplitOnNewLineAccumulator.addDelta(inlineAgentMessage.answer?.delta);
 				// lets check if we have the context ranges
@@ -867,8 +867,8 @@ export const convertVSCodeDiagnostic = (
 export const shouldAddLeadingStrings = (
 	model: InLineAgentLLMType | undefined,
 ): boolean => {
-	if (model == 'MistralInstruct' || model == 'Mixtral') {
+	if (model === 'MistralInstruct' || model === 'Mixtral' || model === 'CodeLLama70BInstruct') {
 		return true;
 	}
 	return false;
-}
+};
