@@ -234,10 +234,10 @@ export async function startSidecarBinary(
 	const bucket = 'sidecar-bin';
 	const fileName =
 		os.platform() === 'win32'
-			? 'windows/sidecar.zip'
+			? 'windows/latest/sidecar.zip'
 			: os.platform() === 'darwin'
-				? 'mac/sidecar.zip'
-				: 'linux/sidecar.zip';
+				? 'mac/latest/sidecar.zip'
+				: 'linux/latest/sidecar.zip';
 
 	const zipDestination = path.join(
 		extensionBasePath,
