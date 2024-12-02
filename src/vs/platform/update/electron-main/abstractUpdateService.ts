@@ -15,7 +15,7 @@ import { IRequestService } from '../../request/common/request.js';
 import { AvailableForDownload, DisablementReason, IUpdateService, State, StateType, UpdateType } from '../common/update.js';
 
 export function createUpdateURL(platform: string, quality: string, productService: IProductService): string {
-	return `${productService.updateUrl}/api/update/ide/${platform}/${quality}/${productService.commit}`;
+	return `${productService.updateUrl}/api/update/${platform}/${quality}/${productService.commit}`;
 }
 
 export type UpdateNotAvailableClassification = {
