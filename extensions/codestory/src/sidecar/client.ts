@@ -17,10 +17,10 @@ import { sleep } from '../utilities/sleep';
 import { CodeSymbolInformationEmbeddings, CodeSymbolKind } from '../utilities/types';
 import { getUserId } from '../utilities/uniqueId';
 import { detectDefaultShell } from './default-shell';
-import { callServerEventStreamingBufferedGET, callServerEventStreamingBufferedPOST } from './ssestream';
 import { ConversationMessage, EditFileResponse, getSideCarModelConfiguration, IdentifierNodeType, InEditorRequest, InEditorTreeSitterDocumentationQuery, InEditorTreeSitterDocumentationReply, InLineAgentMessage, PlanResponse, RepoStatus, SemanticSearchResponse, SidecarVariableType, SidecarVariableTypes, SnippetInformation, SyncUpdate, TextDocument } from './types';
 import { sidecarUsesAgentReasoning } from '../utilities/agentConfiguration';
 import { readAideRulesContent } from '../utilities/aideRules';
+import { fetchWithTee, bufferedGetWithTee, bufferedPostWithTee } from './teefetch';
 
 export enum CompletionStopReason {
 	/**
@@ -65,7 +65,6 @@ export class RepoRef {
 	}
 }
 
-
 export class SideCarClient {
 	private _url: string;
 	private _modelConfiguration: vscode.ModelSelection;
@@ -87,7 +86,7 @@ export class SideCarClient {
 			model_configuration: config,
 		};
 		try {
-			const response = await fetch(url, {
+			const response = await fetchWithTee(url, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -129,7 +128,7 @@ export class SideCarClient {
 			threshold_to_expand: thresholdToExpand,
 		};
 		const url = baseUrl.toString();
-		const response = await fetch(url, {
+		const response = await fetchWithTee(url, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -141,7 +140,7 @@ export class SideCarClient {
 	}
 
 	async getRepoStatus(): Promise<RepoStatus> {
-		const response = await fetch(this.getRepoListUrl());
+		const response = await fetchWithTee(this.getRepoListUrl());
 		const repoList = (await response.json()) as RepoStatus;
 		return repoList;
 	}
@@ -151,7 +150,7 @@ export class SideCarClient {
 		const baseUrl = new URL(this._url);
 		baseUrl.pathname = '/api/repo/status';
 		const url = baseUrl.toString();
-		const asyncIterableResponse = await callServerEventStreamingBufferedGET(url);
+		const asyncIterableResponse = await bufferedGetWithTee(url);
 		for await (const line of asyncIterableResponse) {
 			const lineParts = line.split('data:{');
 			for (const lineSinglePart of lineParts) {
@@ -179,7 +178,8 @@ export class SideCarClient {
 			modelConfig: sideCarModelConfiguration,
 			userId: this._userId,
 		};
-		const asyncIterableResponse = await callServerEventStreamingBufferedPOST(url, finalContext);
+		const asyncIterableResponse = await bufferedPostWithTee(url, finalContext);
+
 		for await (const line of asyncIterableResponse) {
 			const lineParts = line.split('data:{');
 			for (const lineSinglePart of lineParts) {
@@ -199,7 +199,7 @@ export class SideCarClient {
 		const baseUrl = new URL(this._url);
 		baseUrl.pathname = '/api/tree_sitter/documentation_parsing';
 		const url = baseUrl.toString();
-		const response = await fetch(url, {
+		const response = await fetchWithTee(url, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -234,7 +234,7 @@ export class SideCarClient {
 			userId: this._userId,
 			model_config: sideCarModelConfiguration,
 		};
-		const asyncIterableResponse = await callServerEventStreamingBufferedPOST(url, body);
+		const asyncIterableResponse = await bufferedPostWithTee(url, body);
 		for await (const line of asyncIterableResponse) {
 			const lineParts = line.split('data:{');
 			for (const lineSinglePart of lineParts) {
@@ -269,7 +269,7 @@ export class SideCarClient {
 			with_lsp_enrichment: withLspEnrichments,
 		};
 
-		const response = await fetch(url, {
+		const response = await fetchWithTee(url, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -302,7 +302,7 @@ export class SideCarClient {
 			with_lsp_enrichment: false,
 		};
 
-		const response = await fetch(url, {
+		const response = await fetchWithTee(url, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -340,7 +340,7 @@ export class SideCarClient {
 			with_lsp_enrichment: false,
 		};
 
-		const asyncIterableResponse = await callServerEventStreamingBufferedPOST(url, body);
+		const asyncIterableResponse = await bufferedPostWithTee(url, body);
 		for await (const line of asyncIterableResponse) {
 			const lineParts = line.split('data:{');
 			for (const lineSinglePart of lineParts) {
@@ -373,7 +373,7 @@ export class SideCarClient {
 			self_feedback: true,
 		};
 
-		const asyncIterableResponse = await callServerEventStreamingBufferedPOST(url, body);
+		const asyncIterableResponse = await bufferedPostWithTee(url, body);
 		for await (const line of asyncIterableResponse) {
 			const lineParts = line.split('data:{');
 			for (const lineSinglePart of lineParts) {
@@ -401,7 +401,7 @@ export class SideCarClient {
 			thread_id: threadId,
 		};
 
-		const response = await fetch(url, {
+		const response = await fetchWithTee(url, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -432,7 +432,7 @@ export class SideCarClient {
 			user_context: await convertVSCodeVariableToSidecarHackingForPlan(variables, query), // this contains the variables, such as drop/add etc.
 			editor_url: editorUrl,
 		};
-		const response = await fetch(url, {
+		const response = await fetchWithTee(url, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -480,7 +480,7 @@ export class SideCarClient {
 			is_deep_reasoning: true,
 			with_lsp_enrichment: user_context.with_lsp_enrichment,
 		};
-		const asyncIterableResponse = await callServerEventStreamingBufferedPOST(url, body);
+		const asyncIterableResponse = await bufferedPostWithTee(url, body);
 		for await (const line of asyncIterableResponse) {
 			const lineParts = line.split('data:{');
 			for (const lineSinglePart of lineParts) {
@@ -511,7 +511,7 @@ export class SideCarClient {
 		baseUrl.searchParams.set('relative_path', selection.relativeFilePath);
 		baseUrl.searchParams.set('thread_id', threadId);
 		const url = baseUrl.toString();
-		const asyncIterableResponse = await callServerEventStreamingBufferedGET(url);
+		const asyncIterableResponse = await bufferedGetWithTee(url);
 		for await (const line of asyncIterableResponse) {
 			const lineParts = line.split('data:{');
 			for (const lineSinglePart of lineParts) {
@@ -537,7 +537,7 @@ export class SideCarClient {
 		baseUrl.searchParams.set('query', query);
 		baseUrl.searchParams.set('thread_id', threadId);
 		const url = baseUrl.toString();
-		const asyncIterableResponse = await callServerEventStreamingBufferedGET(url);
+		const asyncIterableResponse = await bufferedGetWithTee(url);
 		for await (const line of asyncIterableResponse) {
 			// Now these responses can be parsed properly, since we are using our
 			// own reader over sse, sometimes the reader might send multiple events
@@ -569,7 +569,7 @@ export class SideCarClient {
 			id: requestId,
 		};
 		const url = baseUrl.toString();
-		await fetch(url, {
+		await fetchWithTee(url, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -614,7 +614,7 @@ export class SideCarClient {
 		let finalAnswer = '';
 
 		// Set the combinedSignal as the signal option in the fetch request
-		const asyncIterableResponse = await callServerEventStreamingBufferedPOST(url, body);
+		const asyncIterableResponse = await bufferedPostWithTee(url, body);
 		let bufferedAnswer = '';
 		let runningPreviousLines = '';
 		let isNewLineStart = false;
@@ -742,7 +742,7 @@ export class SideCarClient {
 		let finalAnswer = '';
 
 		// Set the combinedSignal as the signal option in the fetch request
-		const asyncIterableResponse = await callServerEventStreamingBufferedPOST(url, body);
+		const asyncIterableResponse = await bufferedPostWithTee(url, body);
 		for await (const line of asyncIterableResponse) {
 			if (signal.aborted) {
 				return {
@@ -792,7 +792,7 @@ export class SideCarClient {
 			cursor_column: cursorColumn,
 		};
 		const url = baseUrl.toString();
-		const response = await fetch(url, {
+		const response = await fetchWithTee(url, {
 			method: 'POST',
 			body: JSON.stringify(body),
 			headers: {
@@ -829,7 +829,7 @@ export class SideCarClient {
 			events: mappedEvents,
 		};
 		const url = baseUrl.toString();
-		await fetch(url, {
+		await fetchWithTee(url, {
 			method: 'POST',
 			body: JSON.stringify(body),
 			headers: {
@@ -856,7 +856,7 @@ export class SideCarClient {
 			language,
 		};
 		const url = baseUrl.toString();
-		const response = await fetch(url, {
+		const response = await fetchWithTee(url, {
 			method: 'POST',
 			body: JSON.stringify(body),
 			headers: {
@@ -892,7 +892,7 @@ export class SideCarClient {
 		};
 
 		const url = baseUrl.toString();
-		const response = await fetch(url, {
+		const response = await fetchWithTee(url, {
 			method: 'POST',
 			body: JSON.stringify(body),
 			headers: {
@@ -931,7 +931,7 @@ export class SideCarClient {
 		const url = baseUrl.toString();
 
 		// Set the combinedSignal as the signal option in the fetch request
-		const asyncIterableResponse = await callServerEventStreamingBufferedPOST(url, body);
+		const asyncIterableResponse = await bufferedPostWithTee(url, body);
 		for await (const line of asyncIterableResponse) {
 			const lineParts = line.split('data:"{');
 			for (const lineSinglePart of lineParts) {
@@ -955,7 +955,7 @@ export class SideCarClient {
 			try {
 				// console.log('trying to HC for repo check');
 				const url = baseUrl.toString();
-				const response = await fetch(url);
+				const response = await fetchWithTee(url);
 				return response.status === 200;
 			} catch (e) {
 				// sleeping for a attempts * second here
@@ -979,7 +979,7 @@ export class SideCarClient {
 		baseUrl.searchParams.set('repo', reporef.getRepresentation());
 		baseUrl.searchParams.set('query', query);
 		const url = baseUrl.toString();
-		const response = await fetch(url);
+		const response = await fetchWithTee(url);
 		const responseJson = await response.json();
 		const semanticSearchResult = responseJson as SemanticSearchResponse;
 		const codeSymbols = semanticSearchResult.code_spans;
@@ -1031,7 +1031,7 @@ export class SideCarClient {
 		const body = {
 			request_id: threadId,
 		};
-		await fetch(url, {
+		await fetchWithTee(url, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -1099,7 +1099,7 @@ export class SideCarClient {
 				reasoning: sidecarAgentUsesReasoning,
 			};
 
-			const asyncIterableResponse = callServerEventStreamingBufferedPOST(url, body);
+			const asyncIterableResponse = bufferedPostWithTee(url, body);
 			for await (const line of asyncIterableResponse) {
 				const lineParts = line.split('data:{');
 				for (const lineSinglePart of lineParts) {
@@ -1155,7 +1155,7 @@ export class SideCarClient {
 			model_configuration: sideCarModelConfiguration,
 		};
 
-		const asyncIterableResponse = callServerEventStreamingBufferedPOST(url, body);
+		const asyncIterableResponse = bufferedPostWithTee(url, body);
 		for await (const line of asyncIterableResponse) {
 			const lineParts = line.split('data:{');
 			for (const lineSinglePart of lineParts) {
@@ -1189,7 +1189,7 @@ export class SideCarClient {
 				access_token: accessToken,
 				model_configuration: await getSideCarModelConfiguration(await vscode.modelSelection.getConfiguration(), accessToken),
 			};
-			const asyncIterableResponse = callServerEventStreamingBufferedPOST(url, body);
+			const asyncIterableResponse = bufferedPostWithTee(url, body);
 			for await (const line of asyncIterableResponse) {
 				const lineParts = line.split('data:{');
 				for (const lineSinglePart of lineParts) {
@@ -1254,7 +1254,7 @@ export class SideCarClient {
 			shell: currentShell,
 		};
 
-		const asyncIterableResponse = callServerEventStreamingBufferedPOST(url, body);
+		const asyncIterableResponse = bufferedPostWithTee(url, body);
 		for await (const line of asyncIterableResponse) {
 			const lineParts = line.split('data:{');
 			for (const lineSinglePart of lineParts) {
@@ -1313,7 +1313,7 @@ export class SideCarClient {
 				shell: currentShell,
 			};
 
-			const asyncIterableResponse = callServerEventStreamingBufferedPOST(url, body);
+			const asyncIterableResponse = bufferedPostWithTee(url, body);
 			for await (const line of asyncIterableResponse) {
 				const lineParts = line.split('data:{');
 				for (const lineSinglePart of lineParts) {
@@ -1380,7 +1380,7 @@ export class SideCarClient {
 				reasoning: sidecarAgentUsesReasoning,
 			};
 
-			const asyncIterableResponse = callServerEventStreamingBufferedPOST(url, body);
+			const asyncIterableResponse = bufferedPostWithTee(url, body);
 			for await (const line of asyncIterableResponse) {
 				const lineParts = line.split('data:{');
 				for (const lineSinglePart of lineParts) {
@@ -1415,7 +1415,7 @@ export class SideCarClient {
 			exchange_id: exchangeId,
 			editor_url: editorUrl,
 		};
-		await fetch(url, {
+		await fetchWithTee(url, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -1446,7 +1446,7 @@ export class SideCarClient {
 			model_configuration: sideCarModelConfiguration,
 		};
 
-		const asyncIterableResponse = callServerEventStreamingBufferedPOST(url, body);
+		const asyncIterableResponse = bufferedPostWithTee(url, body);
 		for await (const line of asyncIterableResponse) {
 			const lineParts = line.split('data:{');
 			for (const lineSinglePart of lineParts) {
@@ -1520,7 +1520,7 @@ export class SideCarClient {
 				'Authorization': `Bearer ${workosAccessToken}`,
 			};
 
-			const asyncIterableResponse = callServerEventStreamingBufferedPOST(url, body, headers);
+			const asyncIterableResponse = bufferedPostWithTee(url, body, headers);
 			for await (const line of asyncIterableResponse) {
 				const lineParts = line.split('data:{');
 				for (const lineSinglePart of lineParts) {
@@ -1570,7 +1570,7 @@ export class SideCarClient {
 			user_context: await convertVSCodeVariableToSidecar(variables),
 			active_window_data: activeWindowDataForProbing,
 		};
-		const asyncIterableResponse = await callServerEventStreamingBufferedPOST(url, body);
+		const asyncIterableResponse = await bufferedPostWithTee(url, body);
 		for await (const line of asyncIterableResponse) {
 			const lineParts = line.split('data:{');
 			for (const lineSinglePart of lineParts) {
@@ -1595,7 +1595,7 @@ export class SideCarClient {
 			request_id,
 			root_directory,
 		};
-		await fetch(url, {
+		await fetchWithTee(url, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -1616,7 +1616,7 @@ export class SideCarClient {
 			editor_url: editorUrl,
 			grab_import_nodes: false,
 		};
-		await fetch(url, {
+		await fetchWithTee(url, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -1636,7 +1636,7 @@ export class SideCarClient {
 			request_id,
 			instruction,
 		};
-		await fetch(url, {
+		await fetchWithTee(url, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -1679,7 +1679,7 @@ export class SideCarClient {
 			enable_import_nodes: false,
 			deep_reasoning: true,
 		};
-		const asyncIterableResponse = await callServerEventStreamingBufferedPOST(url, body);
+		const asyncIterableResponse = await bufferedPostWithTee(url, body);
 		for await (const line of asyncIterableResponse) {
 			const lineParts = line.split('data:{');
 			for (const lineSinglePart of lineParts) {
@@ -1708,7 +1708,7 @@ export class SideCarClient {
 			context_events: contextEvents,
 			editor_url: editorUrl,
 		};
-		await fetch(url, {
+		await fetchWithTee(url, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
