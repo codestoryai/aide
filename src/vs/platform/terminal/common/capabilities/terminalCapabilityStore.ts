@@ -3,9 +3,9 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Emitter } from 'vs/base/common/event';
-import { Disposable } from 'vs/base/common/lifecycle';
-import { ITerminalCapabilityImplMap, ITerminalCapabilityStore, TerminalCapability, TerminalCapabilityChangeEvent } from 'vs/platform/terminal/common/capabilities/capabilities';
+import { Emitter } from '../../../../base/common/event.js';
+import { Disposable } from '../../../../base/common/lifecycle.js';
+import { ITerminalCapabilityImplMap, ITerminalCapabilityStore, TerminalCapability, TerminalCapabilityChangeEvent } from './capabilities.js';
 
 export class TerminalCapabilityStore extends Disposable implements ITerminalCapabilityStore {
 	private _map: Map<TerminalCapability, { type: TerminalCapability }> = new Map();
@@ -102,9 +102,9 @@ export class TerminalCapabilityStoreMultiplexer extends Disposable implements IT
 			this._onDidAddCapabilityType.fire(capability);
 			this._onDidAddCapability.fire({ id: capability, capability: store.get(capability)! });
 		}
-		store.onDidAddCapabilityType(e => this._onDidAddCapabilityType.fire(e));
-		store.onDidAddCapability(e => this._onDidAddCapability.fire(e));
-		store.onDidRemoveCapabilityType(e => this._onDidRemoveCapabilityType.fire(e));
-		store.onDidRemoveCapability(e => this._onDidRemoveCapability.fire(e));
+		this._register(store.onDidAddCapabilityType(e => this._onDidAddCapabilityType.fire(e)));
+		this._register(store.onDidAddCapability(e => this._onDidAddCapability.fire(e)));
+		this._register(store.onDidRemoveCapabilityType(e => this._onDidRemoveCapabilityType.fire(e)));
+		this._register(store.onDidRemoveCapability(e => this._onDidRemoveCapability.fire(e)));
 	}
 }

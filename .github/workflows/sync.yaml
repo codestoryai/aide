@@ -1,0 +1,47 @@
+name: Sync fork with upstream
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update_fork:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get current date
+        id: current_date
+        run: |
+          echo "date=$(date +'%d%m%y')" >> $GITHUB_OUTPUT
+          echo "time=$(date +'%d%m%y %H:%M')" >> $GITHUB_OUTPUT
+
+      - name: Configure git
+        env:
+          GITHUB_USERNAME: ${{ github.repository_owner }}
+        run: |
+          git config --global user.email "$( echo "${GITHUB_USERNAME}" | awk '{print tolower($0)}' )-ci@not-real.com"
+          git config --global user.name "${GITHUB_USERNAME} CI"
+
+      - name: Fetch upstream changes
+        continue-on-error: true
+        run: |
+          git remote add upstream https://github.com/microsoft/vscode.git
+          git fetch upstream
+          git merge upstream/main || true
+          git add -A
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.BINARIES_RELEASE_PAT }}
+          commit-message: Fetch upstream ${{ steps.current_date.outputs.time }}
+          branch: fetch-upstream-${{ steps.current_date.outputs.date }}
+          title: Fetch upstream ${{ steps.current_date.outputs.date }}

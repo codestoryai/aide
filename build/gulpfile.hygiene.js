@@ -47,5 +47,8 @@ const checkPackageJSONTask = task.define('check-package-json', () => {
 });
 gulp.task(checkPackageJSONTask);
 
-const hygieneTask = task.define('hygiene', task.series(checkPackageJSONTask, () => hygiene(undefined, false)));
+const args = process.argv.slice(2);
+const shouldFix = args.indexOf('--fix') !== -1;
+
+const hygieneTask = task.define('hygiene', task.series(checkPackageJSONTask, () => hygiene(undefined, false, shouldFix)));
 gulp.task(hygieneTask);

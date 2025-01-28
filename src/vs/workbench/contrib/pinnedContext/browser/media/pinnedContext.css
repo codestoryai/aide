@@ -1,0 +1,51 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.pinned-context-widget .pinned-context-header {
+	display: flex;
+	justify-content: space-between;
+}
+
+.pinned-context-widget .pinned-context-header .pinned-context-label {
+	display: flex;
+	gap: 4px;
+	align-items: center;
+}
+
+.pinned-context-widget .pinned-context-header .pinned-context-label .pinned-context-edit-button a,
+.pinned-context-widget .pinned-context-header .pinned-context-overview a.monaco-button {
+	height: 16px;
+	border-radius: 0;
+}
+
+.pinned-context-widget .pinned-context-header .pinned-context-overview a.monaco-button span {
+	line-height: 16px;
+}
+
+.pinned-context-widget .pinned-context-header .pinned-context-label .pinned-context-edit-button a {
+	font-size: 11px;
+	font-weight: bold;
+}
+
+.pinned-context-widget .message.pinned-context-subtle {
+	opacity: 0.5;
+	padding-top: 10px;
+	pointer-events: none;
+	z-index: 1;
+}
+
+.pinned-context-widget .message.pinned-context-subtle.hide {
+	padding: 0px;
+}
+
+.pinned-context-widget .pinned-context-tree {
+	margin-top: 4px;
+}
+
+.pinned-context-widget .pinned-context-tree .monaco-list-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}

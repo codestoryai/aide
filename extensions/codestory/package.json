@@ -1,0 +1,197 @@
+{
+  "name": "codestoryai",
+  "displayName": "Aide",
+  "description": "",
+  "publisher": "codestory-ghost",
+  "version": "0.6.1",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "*"
+  ],
+  "enabledApiProposals": [
+    "aideAgent",
+    "aideGetCodeLensProvider",
+    "aideAgentTerminals",
+    "aideGetInlayHintsProvider",
+    "chatParticipantAdditions",
+    "chatParticipantPrivate",
+    "chatProvider",
+    "chatVariableResolver",
+    "csAuthentication",
+    "csevents",
+    "contribEditorContentMenu",
+    "defaultChatParticipant",
+    "inlineCompletionsAdditions",
+    "interactive",
+    "mappedEditsProvider",
+    "modelSelection",
+    "sidecar",
+    "devtools",
+    "terminalSelection",
+    "tunnels"
+  ],
+  "files": [
+    "src/llm/embeddings/models/**/*",
+    "src/languages/tree-sitter-go.wasm",
+    "src/languages/tree-sitter-python.wasm",
+    "src/completions/text-processing/treeSitter/wasm/tree-sitter-javascript.wasm",
+    "src/completions/text-processing/treeSitter/wasm/tree-sitter-tsx.wasm",
+    "src/completions/text-processing/treeSitter/wasm/tree-sitter-typescript.wasm",
+    "src/completions/text-processing/treeSitter/wasm/tree-sitter-rust.wasm",
+    "src/completions/text-processing/treeSitter/wasm/tree-sitter-go.wasm",
+    "src/completions/text-processing/treeSitter/wasm/tree-sitter-python.wasm",
+    "src/searchIndex/treeSitterWasm/**"
+  ],
+  "license": "UNLICENSED",
+  "repository": {
+    "url": "https://github.com/codestoryai"
+  },
+  "icon": "assets/cs-logomark.png",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codestory.importSettings",
+        "title": "Import settings, extensions and keybindings from a VSCode-based editor"
+      },
+      {
+        "command": "codestory.feedback",
+        "title": "Provide feedback on Discord",
+        "icon": "assets/discord.svg"
+      },
+      {
+        "command": "codestory.startRecordingContext",
+        "title": "Start Recording context"
+      },
+      {
+        "command": "codestory.stopRecordingContext",
+        "title": "Stop Recording Context"
+      },
+      {
+        "command": "codestory.enableDeepReasoning",
+        "title": "Enable deep reasoning"
+      },
+      {
+        "command": "codestory.install-vite-plugin",
+        "title": "Add Vite plugin"
+      }
+    ],
+    "menus": {
+      "editor/content": [
+        {
+          "command": "codestory.install-vite-plugin",
+          "when": "resourceFilename =~ /^vite\\.config\\.(js|ts|mjs|cjs)$/ && devtools.shouldShowAddPlugin",
+          "group": "navigation@-10"
+        }
+      ]
+    },
+    "aideAgents": [
+      {
+        "id": "aide",
+        "name": "Aide",
+        "fullName": "Aide",
+        "description": "Ask anything. Use @ to add context.",
+        "supportsModelPicker": true,
+        "isDefault": true,
+        "metadata": {
+          "icon": "assets/aide-agent.png",
+          "requester": "assets/aide-user.png"
+        },
+        "locations": [
+          "panel"
+        ]
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Aide Extension settings",
+      "properties": {
+        "codestory.disableTelemetry": {
+          "type": "boolean",
+          "default": false,
+          "description": "Disable telemetry and logging on the backend"
+        },
+        "codestory.disableUserNameLookup": {
+          "type": "boolean",
+          "default": false,
+          "description": "Disable user name lookup from env"
+        },
+        "aide.sidecarURL": {
+          "type": "string",
+          "default": "http://127.0.0.1:42424",
+          "description": "The url of the sidecar which is required for aide to work"
+        },
+        "aide.enableAgentReasoning": {
+          "type": "boolean",
+          "default": false,
+          "description": "If the agent uses reasoning models in the hot loop"
+        },
+        "aide.sidecarUseSelfRun": {
+          "type": "boolean",
+          "default": false,
+          "description": "If the sidecar-binary is being run on its own, we can set this to true allowing for rapid proto-typing"
+        },
+        "aide.inlineCompletion.triggerMode": {
+          "type": "string",
+          "default": "automatic",
+          "description": "Set the trigger mode for inline completions, can be either of automatic or manual"
+        },
+        "aide.inlineCompletion.enableTabAutocomplete": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable tab autocomplete for inline completions"
+        },
+        "aide.inlineCompletion.toggleTabAutoCompleteEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Toggle tab autocomplete for inline completions"
+        },
+        "aide.inlineCompletion.copyClipBoardContent": {
+          "type": "boolean",
+          "default": true,
+          "description": "Should we allow clip board content to be sent over"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "gulp compile-extension:codestory && npm run build-preview",
+    "watch": "npm run build-preview && gulp watch-extension:codestory",
+    "vscode:prepublish": "npm run compile && npm run build-preview",
+    "build-preview": "node ./esbuild-preview",
+    "build-ext": "node ../../node_modules/gulp/bin/gulp.js --gulpfile ../../build/gulpfile.extensions.js compile-extension:codestory ./tsconfig.json",
+    "compile-web": "npx webpack-cli --config extension-browser.webpack.config --mode none",
+    "watch-web": "npx webpack-cli --config extension-browser.webpack.config --mode none --watch --info-verbosity verbose"
+  },
+  "devDependencies": {
+    "@types/diff": "^5.0.3",
+    "@types/http-proxy": "^1.17.15",
+    "@types/js-levenshtein": "^1.1.3",
+    "@types/lodash": "^4.14.202",
+    "@types/node": "18.x",
+    "@types/semver": "^7.5.8",
+    "@types/uuid": "^9.0.2",
+    "css-loader": "^7.1.2",
+    "style-loader": "^4.0.0"
+  },
+  "dependencies": {
+    "@google-cloud/storage": "^7.0.1",
+    "diff": "^5.1.0",
+    "http-proxy": "^1.18.1",
+    "ignore": "^7.0.3",
+    "js-levenshtein": "^1.1.6",
+    "lodash": "^4.17.21",
+    "lru-cache": "^10.2.0",
+    "node-fetch": "^3.3.2",
+    "openai": "^4.0.1",
+    "parse5": "^7.2.1",
+    "posthog-node": "^3.1.1",
+    "semver": "^7.6.3",
+    "ts-morph": "^19.0.0",
+    "web-tree-sitter": "^0.20.8",
+    "winston": "^3.10.0",
+    "winston-vscode": "^1.0.0"
+  }
+}

@@ -7,16 +7,18 @@
 	box-sizing: border-box;
 	cursor: default;
 	width: 100%;
-	height: 22px;
+	height: 31px;
 	font-size: 12px;
 	display: flex;
 	overflow: hidden;
+	box-shadow: inset 0px 1px 0px 0px var(--vscode-panel-border);
 }
 
 .monaco-workbench:not(.reduce-motion) .part.statusbar {
 	transition: background-color 0.15s ease-out;
 }
 
+/*
 .monaco-workbench .part.statusbar.status-border-top::after {
 	content: '';
 	position: absolute;
@@ -28,6 +30,7 @@
 	width: 100%;
 	height: 1px;
 }
+*/
 
 .monaco-workbench .part.statusbar > .left-items,
 .monaco-workbench .part.statusbar > .right-items {
@@ -45,7 +48,7 @@
 
 .monaco-workbench  .part.statusbar > .items-container > .statusbar-item {
 	display: inline-block;
-	line-height: 22px;
+	line-height: 31px;
 	height: 100%;
 	vertical-align: top;
 	max-width: 40vw;
@@ -86,6 +89,11 @@
 .monaco-workbench .part.statusbar > .items-container > .statusbar-item.compact-right > .statusbar-item-label {
 	margin-right: 0;
 	margin-left: 3px;
+}
+
+.monaco-workbench .part.statusbar > .items-container > .statusbar-item.compact-left.compact-right > .statusbar-item-label {
+	margin-right:0;
+	margin-left: 0;
 }
 
 .monaco-workbench .part.statusbar > .items-container > .statusbar-item.left.first-visible-item {
@@ -142,7 +150,6 @@
 
 .monaco-workbench .part.statusbar > .items-container > .statusbar-item > a:hover:not(.disabled) {
 	text-decoration: none;
-	color: var(--vscode-statusBarItem-hoverForeground);
 }
 
 .monaco-workbench .part.statusbar > .items-container > .statusbar-item > a.disabled {
@@ -170,7 +177,7 @@
 }
 
 .monaco-workbench:not(.hc-light):not(.hc-black) .part.statusbar > .items-container > .statusbar-item a:hover:not(.disabled) {
-	background-color: var(--vscode-statusBarItem-hoverBackground);
+	background-color: var(--vscode-toolbar-hoverBackground);
 }
 
 /** Status bar entry item kinds */
@@ -200,7 +207,17 @@
 	background-color: var(--vscode-statusBarItem-prominentBackground);
 }
 
-.monaco-workbench .part.statusbar > .items-container > .statusbar-item.prominent-kind a:hover:not(.disabled) {
+/**
+ * Using :not(.compact-right):not(.compact-left) here to improve the visual appearance
+ * when a prominent item uses `compact: true` with other items. The presence of the
+ * !important directive for `background-color` otherwise blocks our special hover handling
+ * code here:
+ * https://github.com/microsoft/vscode/blob/c2037f152b2bb3119ce1d87f52987776540dd57f/src/vs/workbench/browser/parts/statusbar/statusbarPart.ts#L483-L505
+ *
+ * Note: this is currently only done for the prominent kind, but needs to be expanded if
+ * other kinds use compact feature.
+ */
+.monaco-workbench .part.statusbar > .items-container > .statusbar-item.prominent-kind:not(.compact-right):not(.compact-left) a:hover:not(.disabled) {
 	color: var(--vscode-statusBarItem-prominentHoverForeground);
 	background-color: var(--vscode-statusBarItem-prominentHoverBackground) !important;
 }

@@ -1,0 +1,55 @@
+---
+name: Report Bug
+description: Easy form to report a bug
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this bug! This will help us find the cause of the problem quickly with less back-and-forth required.
+  - type: checkboxes
+    attributes:
+      label: Before submitting your bug report
+      options:
+        - label: I'm not able to find an [open issue](https://github.com/codestoryai/sidecar/issues) that reports the same bug
+          required: false
+  - type: textarea
+    attributes:
+      label: Environment
+      description: |
+        Details about your environment.
+
+        - **OS**:
+        - **Sidecar commit**:
+        - **IDE commit**:
+      value: |
+        - OS:
+        - Sidecar commit:
+        - IDE commit:
+      render: Markdown
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Description
+      description: |
+        Please provide a clear and concise description of the bug
+      placeholder: |
+        Short description
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Reproduction
+      description: Steps to reproduce the problem. If possible, include a screenshot or video.
+      placeholder: |
+        Steps
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log output
+      description: |
+        Paste any logs that may be relevant to the bug
+      render: Shell

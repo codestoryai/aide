@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Code - OSS - URL Handler
+Comment=Code Editing. Redefined.
+GenericName=Text Editor
+Exec=/home/ghost_000/github/codestory/ide/.build/electron/code-oss --open-url %U
+Icon=vscode
+Type=Application
+NoDisplay=true
+StartupNotify=true
+Categories=Utility;TextEditor;Development;IDE;
+MimeType=x-scheme-handler/code-oss;
+Keywords=vscode;

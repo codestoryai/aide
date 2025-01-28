@@ -3,38 +3,37 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { importAMDNodeModule } from 'vs/amdX';
-import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { TestConfigurationService } from 'vs/platform/configuration/test/common/testConfigurationService';
-import { TestInstantiationService } from 'vs/platform/instantiation/test/common/instantiationServiceMock';
-import { IProductService } from 'vs/platform/product/common/productService';
-import { ITerminalSimpleLink, TerminalBuiltinLinkType } from 'vs/workbench/contrib/terminalContrib/links/browser/links';
-import { TerminalWordLinkDetector } from 'vs/workbench/contrib/terminalContrib/links/browser/terminalWordLinkDetector';
-import { assertLinkHelper } from 'vs/workbench/contrib/terminalContrib/links/test/browser/linkTestUtils';
-import { TestProductService } from 'vs/workbench/test/common/workbenchTestServices';
-import type { Terminal } from 'xterm';
+import { importAMDNodeModule } from '../../../../../../amdX.js';
+import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../../../base/test/common/utils.js';
+import { IConfigurationService } from '../../../../../../platform/configuration/common/configuration.js';
+import { TestConfigurationService } from '../../../../../../platform/configuration/test/common/testConfigurationService.js';
+import { TestInstantiationService } from '../../../../../../platform/instantiation/test/common/instantiationServiceMock.js';
+import { IProductService } from '../../../../../../platform/product/common/productService.js';
+import { ITerminalSimpleLink, TerminalBuiltinLinkType } from '../../browser/links.js';
+import { TerminalWordLinkDetector } from '../../browser/terminalWordLinkDetector.js';
+import { assertLinkHelper } from './linkTestUtils.js';
+import { TestProductService } from '../../../../../test/common/workbenchTestServices.js';
+import type { Terminal } from '@xterm/xterm';
 
 suite('Workbench - TerminalWordLinkDetector', () => {
+	const store = ensureNoDisposablesAreLeakedInTestSuite();
+
 	let configurationService: TestConfigurationService;
 	let detector: TerminalWordLinkDetector;
 	let xterm: Terminal;
 	let instantiationService: TestInstantiationService;
 
 	setup(async () => {
-		instantiationService = new TestInstantiationService();
+		instantiationService = store.add(new TestInstantiationService());
 		configurationService = new TestConfigurationService();
 		await configurationService.setUserConfiguration('terminal', { integrated: { wordSeparators: '' } });
 
 		instantiationService.stub(IConfigurationService, configurationService);
 		instantiationService.set(IProductService, TestProductService);
 
-		const TerminalCtor = (await importAMDNodeModule<typeof import('xterm')>('xterm', 'lib/xterm.js')).Terminal;
-		xterm = new TerminalCtor({ allowProposedApi: true, cols: 80, rows: 30 });
-		detector = instantiationService.createInstance(TerminalWordLinkDetector, xterm);
-	});
-
-	teardown(() => {
-		instantiationService.dispose();
+		const TerminalCtor = (await importAMDNodeModule<typeof import('@xterm/xterm')>('@xterm/xterm', 'lib/xterm.js')).Terminal;
+		xterm = store.add(new TerminalCtor({ allowProposedApi: true, cols: 80, rows: 30 }));
+		detector = store.add(instantiationService.createInstance(TerminalWordLinkDetector, xterm));
 	});
 
 	async function assertLink(

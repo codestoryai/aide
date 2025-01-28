@@ -8,6 +8,10 @@
 	color: var(--vscode-titleBar-activeForeground);
 }
 
+.monaco-workbench .menubar > .menubar-menu-button:last-child[style*="visibility: hidden"] {
+	display: none;
+}
+
 .monaco-workbench .activitybar .menubar.compact > .menubar-menu-button,
 .monaco-workbench .activitybar .menubar.compact .toolbar-toggle-more {
 	color: var(--vscode-activityBar-inactiveForeground);
@@ -20,6 +24,10 @@
 .monaco-workbench .activitybar .menubar.compact > .menubar-menu-button:focus .toolbar-toggle-more,
 .monaco-workbench .activitybar .menubar.compact:not(:focus-within) > .menubar-menu-button:hover .toolbar-toggle-more {
 	color: var(--vscode-activityBar-foreground);
+}
+
+.monaco-workbench .activitybar .menubar.compact > .menubar-menu-button:focus {
+	background-color: var(--vscode-menubar-selectionBackground);
 }
 
 .monaco-workbench .menubar.inactive:not(.compact) > .menubar-menu-button,
@@ -57,5 +65,4 @@
 	outline-color: var(--vscode-menubar-selectionBorder);
 	outline-offset: -1px;
 }
-
 

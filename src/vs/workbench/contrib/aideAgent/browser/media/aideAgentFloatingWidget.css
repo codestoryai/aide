@@ -1,0 +1,72 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+@keyframes fadein {
+	from {
+		opacity: 0;
+		transform: scale(0.98);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+@keyframes fadeout {
+	from {
+		opacity: 1;
+		transform: scale(1);
+	}
+	to {
+		opacity: 0;
+		transform: scale(0.98);
+	}
+}
+
+.command-palette-container {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	position: fixed;
+	z-index: 40;
+	animation: fadein 0.1s ease forwards;
+	transition: background-color 0.1s ease, backdrop-filter 0.1s ease;
+	transition-delay: 0.1s;
+}
+
+.command-palette-container > .drag-area {
+	cursor: grab;
+}
+
+.command-palette-container:active > .drag-area {
+	cursor: grabbing;
+}
+
+.command-palette-container > .interactive-session {
+	position: relative;
+	cursor: revert;
+	box-shadow: 0px 2px 4px 0px var(--vscode-widget-shadow);
+	border: 1px solid var(--vscode-editorWidget-border);
+	border-radius: 4px;
+	background-color: var(--vscode-input-background);
+}
+
+.command-palette-container > .interactive-session:has(.chat-input-container.focused) {
+	border-color: var(--vscode-focusBorder);
+}
+
+.command-palette-container > .interactive-session > .interactive-input-part {
+	margin: 0;
+	padding: 8px 6px;
+	border-radius: 4px;
+}
+
+.command-palette-container > .interactive-session .chat-input-container {
+	border-color: transparent !important;
+}
+
+.command-palette-container.hiding {
+	animation: fadeout 0.2s ease forwards;
+}

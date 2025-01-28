@@ -1,0 +1,26 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.chat-used-context-icons .icon {
+	height: 18px;
+	display: inline-block;
+	vertical-align: middle;
+}
+
+.chat-used-context-icons .icon::before {
+	color: var(--vscode-descriptionForeground) !important;
+	display: inline-block;
+	background-size: 100%;
+	background-position: left center;
+	background-repeat: no-repeat;
+}
+
+.chat-used-context-icons .file-icon::before {
+	font-size: 175% !important;
+}
+
+.chat-used-context-icons .icon-label {
+	text-wrap: wrap;
+}
