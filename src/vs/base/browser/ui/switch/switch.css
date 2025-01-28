@@ -1,0 +1,52 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.monaco-switch {
+	display: inline-flex;
+	align-items: center;
+	border-radius: 3px;
+	padding: 2px 6px;
+	opacity: 0.8;
+	transition: opacity 0.2s ease;
+}
+
+.monaco-switch:hover {
+	opacity: 1;
+}
+
+.monaco-switch[aria-disabled="true"] {
+	opacity: 0.4;
+	cursor: default;
+}
+
+.monaco-switch .switch-option {
+	background: none;
+	border: none;
+	padding: 2px 4px;
+	cursor: pointer;
+	color: var(--vscode-foreground);
+	opacity: 0.6;
+	font-size: 0.9em;
+	transition: opacity 0.1s ease;
+}
+
+.monaco-switch .switch-option:hover {
+	opacity: 1;
+}
+
+.monaco-switch .switch-option.selected {
+	opacity: 1;
+	color: var(--vscode-foreground);
+}
+
+.monaco-switch .switch-separator {
+	margin: 0 2px;
+	color: var(--vscode-foreground);
+	opacity: 0.4;
+}
+
+.monaco-switch[aria-disabled="true"] .switch-option {
+	cursor: default;
+}

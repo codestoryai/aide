@@ -3,12 +3,12 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { IStringDictionary } from 'vs/base/common/collections';
-import { deepClone, equals } from 'vs/base/common/objects';
-import * as semver from 'vs/base/common/semver/semver';
-import { assertIsDefined } from 'vs/base/common/types';
-import { IExtensionIdentifier } from 'vs/platform/extensions/common/extensions';
-import { ILocalSyncExtension, IRemoteSyncExtension, ISyncExtension } from 'vs/platform/userDataSync/common/userDataSync';
+import { IStringDictionary } from '../../../base/common/collections.js';
+import { deepClone, equals } from '../../../base/common/objects.js';
+import * as semver from '../../../base/common/semver/semver.js';
+import { assertIsDefined } from '../../../base/common/types.js';
+import { IExtensionIdentifier } from '../../extensions/common/extensions.js';
+import { ILocalSyncExtension, IRemoteSyncExtension, ISyncExtension } from './userDataSync.js';
 
 export interface IMergeResult {
 	readonly local: { added: ISyncExtension[]; removed: IExtensionIdentifier[]; updated: ISyncExtension[] };
@@ -46,6 +46,8 @@ export function merge(localExtensions: ILocalSyncExtension[], remoteExtensions: 
 	localExtensions.forEach(({ identifier }) => addUUID(identifier));
 	remoteExtensions.forEach(({ identifier }) => addUUID(identifier));
 	lastSyncExtensions?.forEach(({ identifier }) => addUUID(identifier));
+	skippedExtensions?.forEach(({ identifier }) => addUUID(identifier));
+	lastSyncBuiltinExtensions?.forEach(identifier => addUUID(identifier));
 
 	const getKey = (extension: ISyncExtension): string => {
 		const uuid = extension.identifier.uuid || uuids.get(extension.identifier.id.toLowerCase());

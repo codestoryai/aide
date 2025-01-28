@@ -1,0 +1,52 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.monaco-workbench .cs-account-card {
+	position: absolute;
+	z-index: 1000;
+	top: 35px;
+	right: 0px;
+	width: 260px;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 12px 10px;
+	border-radius: 4px;
+	background-color: var(--vscode-editor-background);
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	transition: box-shadow 0.2s;
+}
+
+.monaco-workbench .cs-account-card > .login-prompt {
+	font-weight: bold;
+	font-size: 14px;
+}
+
+.monaco-workbench .cs-account-card > .monaco-button {
+	margin-top: 8px;
+}
+
+.monaco-workbench .cs-account-card > .profile-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 0 4px;
+}
+
+.monaco-workbench .cs-account-card > .profile-row > .profile-picture {
+	width: 38px;
+	height: 38px;
+	border-radius: 50%;
+	overflow: hidden;
+}
+
+.monaco-workbench .cs-account-card > .profile-row .codicon.codicon-account {
+	font-size: 38px !important;
+}
+
+.monaco-workbench .cs-account-card > .profile-row > .user-details > .name {
+	font-weight: bold;
+	font-size: 14px;
+}

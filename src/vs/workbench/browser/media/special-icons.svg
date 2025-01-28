@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+		<svg width="20" height="20" viewBox="0 0 20 20" fill="none" id="spinner">
+			<circle cx="10" cy="10" r="8.5" stroke="var(--vscode-sideBarSectionHeader-background)" stroke-width="3"/>
+			<path d="M1.78962 12.1999C1.50071 11.1217 1.42701 9.99719 1.57271 8.89051C1.7184 7.78382 2.08065 6.71667 2.63877 5.74998C3.19689 4.78329 3.93995 3.936 4.82551 3.25647C5.71108 2.57695 6.72182 2.07851 7.80002 1.78961" stroke="var(--vscode-progressBar-background)" stroke-width="3" stroke-linecap="round"/>
+		</svg>
+	</defs>
+</svg>

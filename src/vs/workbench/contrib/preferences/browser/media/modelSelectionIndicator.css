@@ -1,0 +1,16 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.model-selection-picker.model-icon::before {
+	content: '\EAA8';
+	font-family: 'codicon';
+	font-size: 16px;
+}
+
+.model-selection-picker.selected-model-icon::before {
+	content: '\EAB2';
+	font-family: 'codicon';
+	font-size: 16px;
+}

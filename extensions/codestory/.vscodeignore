@@ -1,0 +1,13 @@
+# This file contains all the files/directories that should
+# be ignored (i.e. not included) in the final packaged extension.
+test/**
+src/**
+tsconfig.json
+out/**
+extension.webpack.config.js
+extension-browser.webpack.config.js
+yarn.lock
+build/**
+schemas/devContainer.codespaces.schema.json
+schemas/devContainer.vscode.schema.json
+esbuild-preview.js

@@ -3,7 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-
 export const enum MarshalledId {
 	Uri = 1,
 	Regexp,
@@ -19,7 +18,13 @@ export const enum MarshalledId {
 	TimelineActionContext,
 	NotebookCellActionContext,
 	NotebookActionContext,
+	TerminalContext,
 	TestItemContext,
 	Date,
 	TestMessageMenuArgs,
+	ChatViewContext,
+	AideAgentViewContext,
+	LanguageModelToolResult,
+	LanguageModelTextPart,
+	LanguageModelPromptTsxPart,
 }

@@ -7,6 +7,7 @@
 .monaco-workbench .part.titlebar {
 	display: flex;
 	flex-direction: row;
+	border-bottom: 1px solid var(--vscode-panel-border);
 }
 
 .monaco-workbench.mac .part.titlebar {
@@ -88,6 +89,11 @@
 	justify-content: center;
 }
 
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center .preview-action-toolbar-container {
+	-webkit-app-region: no-drag;
+	margin-left: 10px;
+}
+
 .monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right {
 	order: 2;
 	width: 20%;
@@ -102,6 +108,7 @@
 .monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title {
 	flex: 0 1 auto;
 	font-size: 12px;
+	font-weight: 600;
 	overflow: hidden;
 	white-space: nowrap;
 	text-overflow: ellipsis;
@@ -134,26 +141,28 @@
 	visibility: hidden;
 }
 
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item > .action-label {
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center > .monaco-toolbar > .monaco-action-bar > .actions-container > .action-item > .action-label,
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center > .monaco-toolbar > .monaco-action-bar > .actions-container > .action-item.monaco-dropdown-with-primary .action-label {
 	color: var(--vscode-titleBar-activeForeground);
 }
 
-.monaco-workbench .part.titlebar.inactive > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item > .action-label {
+.monaco-workbench .part.titlebar.inactive > .titlebar-container > .titlebar-center > .window-title > .command-center > .monaco-toolbar > .monaco-action-bar > .actions-container > .action-item > .action-label,
+.monaco-workbench .part.titlebar.inactive > .titlebar-container > .titlebar-center > .window-title > .command-center > .monaco-toolbar > .monaco-action-bar > .actions-container > .action-item.monaco-dropdown-with-primary .action-label {
 	color: var(--vscode-titleBar-inactiveForeground);
 }
 
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .codicon {
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center > .monaco-toolbar > .monaco-action-bar > .actions-container > .action-item > .action-label {
 	color: inherit;
 }
 
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center {
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center {
 	display: flex;
 	align-items: stretch;
 	color: var(--vscode-commandCenter-foreground);
 	background-color: var(--vscode-commandCenter-background);
 	border: 1px solid var(--vscode-commandCenter-border);
 	overflow: hidden;
-	margin-left: 6px;
+	margin: 0 6px;
 	border-top-left-radius: 6px;
 	border-bottom-left-radius: 6px;
 	border-top-right-radius: 6px;
@@ -163,27 +172,49 @@
 	max-width: 600px;
 }
 
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center:only-child {
-	margin-left: 0; /* no margin if there is only the command center, without nav buttons */
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center .action-item.command-center-quick-pick {
+	display: flex;
+	justify-content: start;
+	overflow: hidden;
+	margin: auto;
+	max-width: 600px;
 }
 
-.monaco-workbench .part.titlebar.inactive > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center {
-	color: var(--vscode-titleBar-inactiveForeground);
-	border-color: var(--vscode-commandCenter-inactiveBorder) !important;
-}
-
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center .search-icon {
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center .action-item.command-center-quick-pick .search-icon {
 	font-size: 14px;
 	opacity: .8;
 	margin: auto 3px;
+	color: var(--vscode-commandCenter-foreground);
 }
 
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center .search-label {
+.monaco-workbench .part.titlebar.inactive > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center .action-item.command-center-quick-pick .search-icon {
+	color: var(--vscode-titleBar-inactiveForeground);
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center .action-item.command-center-quick-pick .search-label {
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
 
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center:HOVER {
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center.multiple {
+	justify-content: flex-start;
+	padding: 0 12px;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center.multiple.active .action-label {
+	background-color: inherit;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center:only-child {
+	margin-left: 0; /* no margin if there is only the command center, without nav buttons */
+}
+
+.monaco-workbench .part.titlebar.inactive > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center {
+	color: var(--vscode-titleBar-inactiveForeground);
+	border-color: var(--vscode-commandCenter-inactiveBorder) !important;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-center > .window-title > .command-center .action-item.command-center-center:HOVER {
 	color: var(--vscode-commandCenter-activeForeground);
 	background-color: var(--vscode-commandCenter-activeBackground);
 	border-color: var(--vscode-commandCenter-activeBorder);
@@ -195,15 +226,16 @@
 	z-index: 2500;
 	min-width: 36px;
 	flex-wrap: nowrap;
-	order: 2;
+	order: 3;
 }
 
 .monaco-workbench.web .part.titlebar > .titlebar-container > .titlebar-left > .menubar {
 	margin-left: 4px;
 }
 
-.monaco-workbench .part.titlebar > .titlebar-container.counter-zoom .menubar .menubar-menu-button > .menubar-menu-items-holder.monaco-menu-container {
-	zoom: var(--zoom-factor);
+.monaco-workbench .part.titlebar > .titlebar-container.counter-zoom .menubar .menubar-menu-button > .menubar-menu-items-holder.monaco-menu-container,
+.monaco-workbench .part.titlebar > .titlebar-container.counter-zoom .monaco-toolbar .dropdown-action-container {
+	zoom: var(--zoom-factor); /* helps to position the menu properly when counter zooming */
 }
 
 /* Resizer */
@@ -246,24 +278,7 @@
 	display: none;
 }
 
-.monaco-workbench .part.titlebar > .titlebar-container .window-appicon > .home-bar-icon-badge {
-	position: absolute;
-	right: 9px;
-	bottom: 6px;
-	width: 8px;
-	height: 8px;
-	z-index: 1;
-	/* on top of home indicator */
-	background-image: url('../../../media/code-icon.svg');
-	background-repeat: no-repeat;
-	background-position: center center;
-	background-size: 8px;
-	pointer-events: none;
-	border-top: 1px solid transparent;
-	border-left: 1px solid transparent;
-}
-
-/* Window Controls (Minimize, Max/Restore, Close) */
+/* Window Controls Container */
 .monaco-workbench .part.titlebar .window-controls-container {
 	display: flex;
 	flex-grow: 0;
@@ -275,13 +290,19 @@
 	height: 100%;
 }
 
-/* Web WCO Sizing/Ordering */
+.monaco-workbench.fullscreen .part.titlebar .window-controls-container {
+	display: none;
+	background-color: transparent;
+}
+
+/* Window Controls Container Web: Apply WCO environment variables (https://developer.mozilla.org/en-US/docs/Web/CSS/env#titlebar-area-x) */
 .monaco-workbench.web .part.titlebar .titlebar-right .window-controls-container {
 	width: calc(100vw - env(titlebar-area-width, 100vw) - env(titlebar-area-x, 0px));
 	height: env(titlebar-area-height, 35px);
 }
 
 .monaco-workbench.web .part.titlebar .titlebar-left .window-controls-container {
+	order: 0;
 	width: env(titlebar-area-x, 0px);
 	height: env(titlebar-area-height, 35px);
 }
@@ -294,27 +315,29 @@
 	order: 1;
 }
 
-/* Desktop Windows/Linux Window Controls*/
-.monaco-workbench:not(.web):not(.mac) .part.titlebar .window-controls-container.primary {
+/* Window Controls Container Desktop: apply zoom friendly size */
+.monaco-workbench:not(.web):not(.mac) .part.titlebar .window-controls-container {
 	width: calc(138px / var(--zoom-factor, 1));
 }
 
-.monaco-workbench:not(.web):not(.mac) .part.titlebar .titlebar-container.counter-zoom .window-controls-container.primary {
+.monaco-workbench:not(.web):not(.mac) .part.titlebar .titlebar-container.counter-zoom .window-controls-container {
 	width: 138px;
+}
+
+.monaco-workbench.linux:not(.web) .part.titlebar .window-controls-container.wco-enabled {
+	width: calc(100vw - env(titlebar-area-width, 100vw) - env(titlebar-area-x, 0px));
+}
+
+.monaco-workbench.linux:not(.web) .part.titlebar .titlebar-container.counter-zoom .window-controls-container.wco-enabled {
+	width: calc(100vw - env(titlebar-area-width, 100vw) - env(titlebar-area-x, 0px));
 }
 
 .monaco-workbench:not(.web):not(.mac) .part.titlebar .titlebar-container:not(.counter-zoom) .window-controls-container * {
 	zoom: calc(1 / var(--zoom-factor, 1));
 }
 
-/* Desktop macOS Window Controls */
-.monaco-workbench:not(.web).mac .part.titlebar .window-controls-container.primary {
+.monaco-workbench:not(.web).mac .part.titlebar .window-controls-container {
 	width: 70px;
-}
-
-.monaco-workbench.fullscreen .part.titlebar .window-controls-container {
-	display: none;
-	background-color: transparent;
 }
 
 /* Window Control Icons */
@@ -325,6 +348,11 @@
 	height: 100%;
 	width: 46px;
 	font-size: 16px;
+	color: var(--vscode-titleBar-activeForeground);
+}
+
+.monaco-workbench .part.titlebar.inactive .window-controls-container > .window-icon {
+	color: var(--vscode-titleBar-inactiveForeground);
 }
 
 .monaco-workbench .part.titlebar .window-controls-container > .window-icon::before {
@@ -336,7 +364,7 @@
 	background-color: rgba(255, 255, 255, 0.1);
 }
 
-.monaco-workbench .part.titlebar.light > .window-controls-container > .window-icon:hover {
+.monaco-workbench .part.titlebar.light .window-controls-container > .window-icon:hover {
 	background-color: rgba(0, 0, 0, 0.1);
 }
 
@@ -348,8 +376,40 @@
 	color: white;
 }
 
-/* Layout Controls */
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .layout-controls-container {
+/* Action Tool Bar Controls */
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-left > .action-toolbar-container {
+	order: 2; /* Ensure it comes after the window controls container */
+	margin-left: env(titlebar-area-x, 0px); /* Add a margin to separate it from the window controls */
+	display: none;
+	padding-left: 4px;
+	padding-right: 4px;
+	flex-grow: 0;
+	flex-shrink: 0;
+	text-align: center;
+	position: relative;
+	z-index: 2500;
+	-webkit-app-region: no-drag;
+	height: 100%;
+}
+
+.monaco-workbench.mac:not(.web) .part.titlebar > .titlebar-container > .titlebar-left > .action-toolbar-container {
+	left: 8px;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-left > .action-toolbar-container:not(.has-no-actions) {
+	display: flex;
+	justify-content: center;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-left > .action-toolbar-container .codicon {
+	color: inherit;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-left > .action-toolbar-container .monaco-action-bar .action-item {
+	display: flex;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .secondary-action-toolbar-container {
 	display: none;
 	padding-right: 2px;
 	flex-grow: 0;
@@ -359,27 +419,113 @@
 	z-index: 2500;
 	-webkit-app-region: no-drag;
 	height: 100%;
-	margin-left: auto;
 	min-width: 28px;
 }
 
-.monaco-workbench.mac:not(.web) .part.titlebar > .titlebar-container > .titlebar-right > .layout-controls-container {
-	right: 8px;
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .secondary-action-toolbar-container {
+	margin-left: auto;
 }
 
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .layout-controls-container.show-layout-control {
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .secondary-action-toolbar-container:not(.has-no-actions) {
 	display: flex;
 	justify-content: center;
 }
 
-.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .layout-controls-container .codicon {
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .secondary-action-toolbar-container .codicon {
 	color: inherit;
 }
 
-.monaco-workbench .part.titlebar .window-controls-container .window-icon {
-	color: var(--vscode-titleBar-activeForeground);
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .secondary-action-toolbar-container .monaco-action-bar .action-item {
+	display: flex;
 }
 
-.monaco-workbench .part.titlebar.inactive .window-controls-container .window-icon {
-	color: var(--vscode-titleBar-inactiveForeground);
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .secondary-action-toolbar-container .monaco-action-bar .badge {
+	margin-left: 8px;
+	display: flex;
+	align-items: center;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .secondary-action-toolbar-container .monaco-action-bar .action-item.icon .badge {
+	margin-left: 0px;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .secondary-action-toolbar-container .monaco-action-bar .badge .badge-content {
+	padding: 3px 5px;
+	border-radius: 11px;
+	font-size: 9px;
+	min-width: 11px;
+	height: 16px;
+	line-height: 11px;
+	font-weight: normal;
+	text-align: center;
+	display: inline-block;
+	box-sizing: border-box;
+	position: relative;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .secondary-action-toolbar-container .monaco-action-bar .action-item.icon .badge.compact {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	margin: auto;
+	left: 0;
+	overflow: hidden;
+	width: 100%;
+	height: 100%;
+	z-index: 2;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .secondary-action-toolbar-container .monaco-action-bar .action-item.icon .badge.compact .badge-content::before {
+	mask-size: 12px;
+	-webkit-mask-size: 12px;
+	top: 2px;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > .secondary-action-toolbar-container .monaco-action-bar .action-item.icon .badge.compact .badge-content {
+	position: absolute;
+	top: 10px;
+	right: 0px;
+	font-size: 9px;
+	font-weight: 600;
+	min-width: 12px;
+	height: 12px;
+	line-height: 12px;
+	padding: 0 2px;
+	border-radius: 16px;
+	text-align: center;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > :is(.codestory-action-toolbar-container, .rageShake-action-toolbar-container) {
+	display: none;
+	flex-grow: 0;
+	flex-shrink: 0;
+	text-align: center;
+	position: relative;
+	z-index: 2500;
+	-webkit-app-region: no-drag;
+	height: 100%;
+	min-width: 28px;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > :is(.codestory-action-toolbar-container, .rageShake-action-toolbar-container):not(.has-no-actions) {
+	display: flex;
+	justify-content: center;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > :is(.codestory-action-toolbar-container, .rageShake-action-toolbar-container) .monaco-action-bar .actions-container {
+	padding-right: 4px;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > :is(.codestory-action-toolbar-container, .rageShake-action-toolbar-container) .monaco-action-bar .action-item {
+	display: flex;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right >.codestory-action-toolbar-container .monaco-action-bar .action-item .action-label {
+	padding: 3px 12px;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.monaco-workbench .part.titlebar > .titlebar-container > .titlebar-right > :is(.codestory-action-toolbar-container, .rageShake-action-toolbar-container) .monaco-action-bar .actions-container .action-item:has(> .action-label.codicon-warning.checked) {
+	background: var(--vscode-actionBar-toggledBackground) !important;
 }

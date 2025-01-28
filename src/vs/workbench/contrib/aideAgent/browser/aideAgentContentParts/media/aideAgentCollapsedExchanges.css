@@ -1,0 +1,30 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+
+.aide-collapsed-exchanges-block {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.aide-collapsed-exchanges-info {
+	display: flex;
+	gap: 12px;
+	padding-inline: 3px;
+	align-items: center;
+	text-align: center;
+	color: var(--vscode-list-deemphasizedForeground);
+}
+
+.aide-collapsed-exchanges-info::before,
+.aide-collapsed-exchanges-info::after {
+	content: '';
+	flex-grow: 1;
+	height: 1px;
+	background-color: var(--vscode-editorPane-background);
+	border-radius: 1px;
+	transform: translateY(1px);
+}

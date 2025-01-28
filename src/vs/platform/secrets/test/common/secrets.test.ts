@@ -3,12 +3,13 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import * as assert from 'assert';
+import assert from 'assert';
 import * as sinon from 'sinon';
-import { IEncryptionService, KnownStorageProvider } from 'vs/platform/encryption/common/encryptionService';
-import { NullLogService } from 'vs/platform/log/common/log';
-import { BaseSecretStorageService } from 'vs/platform/secrets/common/secrets';
-import { InMemoryStorageService } from 'vs/platform/storage/common/storage';
+import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
+import { IEncryptionService, KnownStorageProvider } from '../../../encryption/common/encryptionService.js';
+import { NullLogService } from '../../../log/common/log.js';
+import { BaseSecretStorageService } from '../../common/secrets.js';
+import { InMemoryStorageService } from '../../../storage/common/storage.js';
 
 class TestEncryptionService implements IEncryptionService {
 	_serviceBrand: undefined;
@@ -50,6 +51,8 @@ class TestNoEncryptionService implements IEncryptionService {
 }
 
 suite('secrets', () => {
+	const store = ensureNoDisposablesAreLeakedInTestSuite();
+
 	suite('BaseSecretStorageService useInMemoryStorage=true', () => {
 		let service: BaseSecretStorageService;
 		let spyEncryptionService: sinon.SinonSpiedInstance<TestEncryptionService>;
@@ -58,7 +61,12 @@ suite('secrets', () => {
 		setup(() => {
 			sandbox = sinon.createSandbox();
 			spyEncryptionService = sandbox.spy(new TestEncryptionService());
-			service = new BaseSecretStorageService(true, new InMemoryStorageService(), spyEncryptionService, new NullLogService());
+			service = store.add(new BaseSecretStorageService(
+				true,
+				store.add(new InMemoryStorageService()),
+				spyEncryptionService,
+				store.add(new NullLogService())
+			));
 		});
 
 		teardown(() => {
@@ -98,10 +106,10 @@ suite('secrets', () => {
 			const key = 'my-secret';
 			const value = 'my-secret-value';
 			let eventFired = false;
-			service.onDidChangeSecret((changedKey) => {
+			store.add(service.onDidChangeSecret((changedKey) => {
 				assert.strictEqual(changedKey, key);
 				eventFired = true;
-			});
+			}));
 			await service.set(key, value);
 			assert.strictEqual(eventFired, true);
 		});
@@ -115,7 +123,12 @@ suite('secrets', () => {
 		setup(() => {
 			sandbox = sinon.createSandbox();
 			spyEncryptionService = sandbox.spy(new TestEncryptionService());
-			service = new BaseSecretStorageService(false, new InMemoryStorageService(), spyEncryptionService, new NullLogService());
+			service = store.add(new BaseSecretStorageService(
+				false,
+				store.add(new InMemoryStorageService()),
+				spyEncryptionService,
+				store.add(new NullLogService()))
+			);
 		});
 
 		teardown(() => {
@@ -155,10 +168,10 @@ suite('secrets', () => {
 			const key = 'my-secret';
 			const value = 'my-secret-value';
 			let eventFired = false;
-			service.onDidChangeSecret((changedKey) => {
+			store.add(service.onDidChangeSecret((changedKey) => {
 				assert.strictEqual(changedKey, key);
 				eventFired = true;
-			});
+			}));
 			await service.set(key, value);
 			assert.strictEqual(eventFired, true);
 		});
@@ -172,7 +185,12 @@ suite('secrets', () => {
 		setup(() => {
 			sandbox = sinon.createSandbox();
 			spyNoEncryptionService = sandbox.spy(new TestNoEncryptionService());
-			service = new BaseSecretStorageService(false, new InMemoryStorageService(), spyNoEncryptionService, new NullLogService());
+			service = store.add(new BaseSecretStorageService(
+				false,
+				store.add(new InMemoryStorageService()),
+				spyNoEncryptionService,
+				store.add(new NullLogService()))
+			);
 		});
 
 		teardown(() => {

@@ -3,15 +3,15 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { Promises, RunOnceScheduler, runWhenIdle } from 'vs/base/common/async';
-import { Emitter, Event, PauseableEmitter } from 'vs/base/common/event';
-import { Disposable, DisposableStore, dispose, MutableDisposable } from 'vs/base/common/lifecycle';
-import { mark } from 'vs/base/common/performance';
-import { isUndefinedOrNull } from 'vs/base/common/types';
-import { InMemoryStorageDatabase, IStorage, IStorageChangeEvent, Storage, StorageHint, StorageValue } from 'vs/base/parts/storage/common/storage';
-import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
-import { isUserDataProfile, IUserDataProfile } from 'vs/platform/userDataProfile/common/userDataProfile';
-import { IAnyWorkspaceIdentifier } from 'vs/platform/workspace/common/workspace';
+import { Promises, RunOnceScheduler, runWhenGlobalIdle } from '../../../base/common/async.js';
+import { Emitter, Event, PauseableEmitter } from '../../../base/common/event.js';
+import { Disposable, DisposableStore, dispose, MutableDisposable } from '../../../base/common/lifecycle.js';
+import { mark } from '../../../base/common/performance.js';
+import { isUndefinedOrNull } from '../../../base/common/types.js';
+import { InMemoryStorageDatabase, IStorage, IStorageChangeEvent, Storage, StorageHint, StorageValue } from '../../../base/parts/storage/common/storage.js';
+import { createDecorator } from '../../instantiation/common/instantiation.js';
+import { isUserDataProfile, IUserDataProfile } from '../../userDataProfile/common/userDataProfile.js';
+import { IAnyWorkspaceIdentifier } from '../../workspace/common/workspace.js';
 
 export const IS_NEW_KEY = '__$__isNewStorageMarker';
 export const TARGET_KEY = '__$__targetStorageMarker';
@@ -205,6 +205,11 @@ export interface IStorageService {
 	isNew(scope: StorageScope): boolean;
 
 	/**
+	 * Attempts to reduce the DB size via optimization commands if supported.
+	 */
+	optimize(scope: StorageScope): Promise<void>;
+
+	/**
 	 * Allows to flush state, e.g. in cases where a shutdown is
 	 * imminent. This will send out the `onWillSaveState` to ask
 	 * everyone for latest state.
@@ -338,7 +343,7 @@ export abstract class AbstractStorageService extends Disposable implements IStor
 	}
 
 	private doFlushWhenIdle(): void {
-		this.runFlushWhenIdle.value = runWhenIdle(() => {
+		this.runFlushWhenIdle.value = runWhenGlobalIdle(() => {
 			if (this.shouldFlushWhenIdle()) {
 				this.flush();
 			}
@@ -625,6 +630,15 @@ export abstract class AbstractStorageService extends Disposable implements IStor
 		);
 	}
 
+	async optimize(scope: StorageScope): Promise<void> {
+
+		// Await pending data to be flushed to the DB
+		// before attempting to optimize the DB
+		await this.flush();
+
+		return this.getStorage(scope)?.optimize();
+	}
+
 	async switch(to: IAnyWorkspaceIdentifier | IUserDataProfile, preserveData: boolean): Promise<void> {
 
 		// Signal as event so that clients can store data before we switch
@@ -732,6 +746,10 @@ export class InMemoryStorageService extends AbstractStorageService {
 
 	protected async switchToWorkspace(): Promise<void> {
 		// no-op when in-memory
+	}
+
+	protected override shouldFlushWhenIdle(): boolean {
+		return false;
 	}
 
 	hasScope(scope: IAnyWorkspaceIdentifier | IUserDataProfile): boolean {

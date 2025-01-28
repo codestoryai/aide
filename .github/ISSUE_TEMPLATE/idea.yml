@@ -1,0 +1,18 @@
+---
+name: Suggest Idea
+description: Share your ideas
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We'd love to hear your ideas for improvement.
+  - type: textarea
+    attributes:
+      label: Idea
+      description: |
+        Please explain what problem your idea solves
+      placeholder: |
+        Description
+    validations:
+      required: false

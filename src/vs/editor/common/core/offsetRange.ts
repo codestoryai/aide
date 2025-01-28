@@ -3,12 +3,21 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { BugIndicatingError } from 'vs/base/common/errors';
+import { BugIndicatingError } from '../../../base/common/errors.js';
+
+export interface IOffsetRange {
+	readonly start: number;
+	readonly endExclusive: number;
+}
 
 /**
  * A range of offsets (0-based).
 */
-export class OffsetRange {
+export class OffsetRange implements IOffsetRange {
+	public static fromTo(start: number, endExclusive: number): OffsetRange {
+		return new OffsetRange(start, endExclusive);
+	}
+
 	public static addRange(range: OffsetRange, sortedRanges: OffsetRange[]): void {
 		let i = 0;
 		while (i < sortedRanges.length && sortedRanges[i].endExclusive < range.start) {
@@ -36,6 +45,14 @@ export class OffsetRange {
 
 	public static ofLength(length: number): OffsetRange {
 		return new OffsetRange(0, length);
+	}
+
+	public static ofStartAndLength(start: number, length: number): OffsetRange {
+		return new OffsetRange(start, start + length);
+	}
+
+	public static emptyAt(offset: number): OffsetRange {
+		return new OffsetRange(offset, offset);
 	}
 
 	constructor(public readonly start: number, public readonly endExclusive: number) {
@@ -103,8 +120,38 @@ export class OffsetRange {
 		return undefined;
 	}
 
+	public intersectionLength(range: OffsetRange): number {
+		const start = Math.max(this.start, range.start);
+		const end = Math.min(this.endExclusive, range.endExclusive);
+		return Math.max(0, end - start);
+	}
+
+	public intersects(other: OffsetRange): boolean {
+		const start = Math.max(this.start, other.start);
+		const end = Math.min(this.endExclusive, other.endExclusive);
+		return start < end;
+	}
+
+	public intersectsOrTouches(other: OffsetRange): boolean {
+		const start = Math.max(this.start, other.start);
+		const end = Math.min(this.endExclusive, other.endExclusive);
+		return start <= end;
+	}
+
+	public isBefore(other: OffsetRange): boolean {
+		return this.endExclusive <= other.start;
+	}
+
+	public isAfter(other: OffsetRange): boolean {
+		return this.start >= other.endExclusive;
+	}
+
 	public slice<T>(arr: T[]): T[] {
 		return arr.slice(this.start, this.endExclusive);
+	}
+
+	public substring(str: string): string {
+		return str.substring(this.start, this.endExclusive);
 	}
 
 	/**
@@ -143,6 +190,12 @@ export class OffsetRange {
 			result.push(f(i));
 		}
 		return result;
+	}
+
+	public forEach(f: (offset: number) => void): void {
+		for (let i = this.start; i < this.endExclusive; i++) {
+			f(i);
+		}
 	}
 }
 

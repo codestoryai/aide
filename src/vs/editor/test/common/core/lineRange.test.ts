@@ -3,10 +3,14 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import assert = require('assert');
-import { LineRange, LineRangeSet } from 'vs/editor/common/core/lineRange';
+import assert from 'assert';
+import { ensureNoDisposablesAreLeakedInTestSuite } from '../../../../base/test/common/utils.js';
+import { LineRange, LineRangeSet } from '../../../common/core/lineRange.js';
 
 suite('LineRange', () => {
+
+	ensureNoDisposablesAreLeakedInTestSuite();
+
 	test('contains', () => {
 		const r = new LineRange(2, 3);
 		assert.deepStrictEqual(r.contains(1), false);
@@ -17,6 +21,9 @@ suite('LineRange', () => {
 });
 
 suite('LineRangeSet', () => {
+
+	ensureNoDisposablesAreLeakedInTestSuite();
+
 	test('addRange', () => {
 		const set = new LineRangeSet();
 		set.addRange(new LineRange(2, 3));

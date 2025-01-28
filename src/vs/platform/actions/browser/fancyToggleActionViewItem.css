@@ -1,0 +1,80 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.monaco-action-bar .action-item.fancy-toggle {
+	position: relative;
+	display: inline-grid;
+	grid-template-columns: 1fr 1fr;
+	height: 14px;
+	cursor: pointer;
+	isolation: isolate;
+}
+
+.monaco-action-bar .action-item.fancy-toggle::before {
+	content: '';
+	position: absolute;
+	width: calc(100% - 4px);
+	height: 100%;
+	border-radius: 9999px;
+	background-color: var(--vscode-input-background);
+	border: 1px solid var(--vscode-input-border);
+	transition: background-color 0.2s ease-in-out;
+}
+
+/* "Checked" track color */
+.monaco-action-bar .action-item.fancy-toggle.fancy-toggle-checked::before {
+	background-color: var(--vscode-button-background);
+	border-color: color-mix(in srgb, var(--vscode-button-background) 60%, var(--vscode-input-border) 40%);
+}
+
+/* The handle (the .action-label) */
+.monaco-action-bar .action-item.fancy-toggle .action-label.fancy-toggle-handle {
+	display: grid !important; /* So child icons can be layered */
+	padding: 2px !important;
+	margin: 0;
+	border-radius: 9999px;
+	border: 1px solid var(--vscode-input-border);
+	background-color: var(--vscode-editor-background) !important;
+	transition: transform 0.2s ease-in-out;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	text-decoration: none;
+	overflow: hidden;
+	z-index: 10;
+}
+
+.monaco-action-bar .action-item.fancy-toggle.fancy-toggle-checked .action-label.fancy-toggle-handle {
+	transform: translateX(100%);
+	border-color: color-mix(in srgb, var(--vscode-button-background) 20%, var(--vscode-input-border) 80%);
+}
+
+/* Each icon as a nested span */
+.monaco-action-bar .action-item.fancy-toggle .action-label.fancy-toggle-handle .fancy-toggle-icon {
+	grid-area: 1 / -1 / 1 / -1;
+	opacity: 1;
+	transition: opacity 0.2s ease-in-out;
+	width: 18px  !important;
+	height: 18px  !important;
+	font-size: 14px !important;
+	justify-content: center;
+}
+
+.monaco-action-bar .action-item.fancy-toggle .action-label.fancy-toggle-handle .toggled-icon {
+	opacity: 0;
+}
+
+.monaco-action-bar .action-item.fancy-toggle.fancy-toggle-checked .toggled-icon {
+	opacity: 1;
+}
+.monaco-action-bar .action-item.fancy-toggle.fancy-toggle-checked .untoggled-icon {
+	opacity: 0;
+}
+
+/* Disabled state */
+.monaco-action-bar .action-item.fancy-toggle .action-label.fancy-toggle-handle.disabled {
+	opacity: 0.6;
+	cursor: default;
+}
