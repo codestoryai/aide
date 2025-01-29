@@ -655,8 +655,12 @@ export class AideAgentSessionProvider implements vscode.AideSessionParticipant {
 						}
 						return;
 					} else if (event.event.FrameworkEvent.ToolNotFound) {
-						// Todo (@g-danna @theskcd) make the tool not found error more descriptive and use its own type
-						responseStream.stream.toolTypeError({ message: 'An LLM error occurred, please try again later.' });
+						responseStream.stream.toolTypeError({ 
+							message: 'The AI assistant encountered an issue while trying to process your request. ' +
+									'This may be due to a temporary problem with the language model service. ' +
+									'Please try your request again in a moment. If the issue persists, ' +
+									'we\'d appreciate it if you could report this using the feedback tool above.'
+						});
 						responseStream.stream.stage({ message: 'Error' });
 						errorCallback?.();
 						const openStreams = this.responseStreamCollection.getAllResponseStreams();
