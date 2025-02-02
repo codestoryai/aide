@@ -73,10 +73,40 @@
 }
 
 .model-selection-editor > .model-selection-body > .table-container .monaco-table-tr .monaco-table-td .monaco-action-bar .action-item > .icon {
-	width: 16px;
-	height: 16px;
-	cursor: pointer;
-	margin-top: 3px;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    padding: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-tr .monaco-table-td .monaco-action-bar .action-item {
+    display: flex;
+    align-items: center;
+    padding: 0 4px;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-tr .monaco-table-td .monaco-action-bar .action-item .codicon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-tr .monaco-table-td .monaco-action-bar .action-item .codicon:before {
+    font-size: inherit;
+    line-height: inherit;
+}
+
+.model-selection-editor > .model-selection-body > .table-container .monaco-table-tr .monaco-table-td .actions {
+    display: flex;
+    align-items: center;
+    height: 100%;
 }
 
 /** columns styling **/
