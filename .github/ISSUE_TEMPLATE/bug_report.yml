@@ -11,7 +11,7 @@ body:
     attributes:
       label: Before submitting your bug report
       options:
-        - label: I'm not able to find an [open issue](https://github.com/codestoryai/sidecar/issues) that reports the same bug
+        - label: I'm not able to find an [open issue](https://github.com/codestoryai/aide/issues) that reports the same bug
           required: false
   - type: textarea
     attributes:
