@@ -6,4 +6,16 @@
 import { localize } from '../../../nls.js';
 import { RawContextKey } from '../../contextkey/common/contextkey.js';
 
-export const CS_ACCOUNT_CARD_VISIBLE = new RawContextKey<boolean>('csAccountCardVisible', false, { type: 'boolean', description: localize('csAccountCardVisible', "Whether the CodeStory account card is visible") });
+/**
+ * Context key that tracks the visibility state of the CodeStory account card.
+ * Used to toggle the account interface and maintain its visibility state.
+ * Default value is false (hidden).
+ */
+export const CS_ACCOUNT_CARD_VISIBLE = new RawContextKey<boolean>(
+    'csAccountCardVisible',
+    false,
+    {
+        type: 'boolean',
+        description: localize('csAccountCardVisible', "Whether the CodeStory account card is visible")
+    }
+);

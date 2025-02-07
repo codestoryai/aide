@@ -33,6 +33,17 @@ export class CSAccountService extends Disposable implements ICSAccountService {
 
 	private _websiteBase: string | null = null;
 
+	/**
+	 * Creates a new instance of CSAccountService
+	 * @param contextKeyService - Service for managing context keys
+	 * @param csAuthenticationService - Service for handling authentication
+	 * @param environmentService - Service for environment information
+	 * @param instantiationService - Service for instantiating components
+	 * @param layoutService - Service for managing UI layout
+	 * @param notificationService - Service for showing notifications
+	 * @param storageService - Service for persistent storage
+	 * @param openerService - Service for opening external URLs
+	 */
 	constructor(
 		@IContextKeyService private readonly contextKeyService: IContextKeyService,
 		@ICSAuthenticationService private readonly csAuthenticationService: ICSAuthenticationService,
@@ -75,6 +86,12 @@ export class CSAccountService extends Disposable implements ICSAccountService {
 		}
 	}
 
+	/**
+	 * Ensures the user is authorized to use the service.
+	 * Handles authentication flow and subscription validation.
+	 * Shows account card if authentication is needed.
+	 * @returns Promise<boolean> - true if user is authorized, false otherwise
+	 */
 	async ensureAuthorized(): Promise<boolean> {
 		const count = this.storageService.getNumber(STORAGE_KEY, StorageScope.PROFILE, 0);
 		try {

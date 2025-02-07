@@ -32,13 +32,35 @@ const SESSION_SECRET_KEY = 'codestory.auth.session';
 export class CSAuthenticationService extends Themable implements ICSAuthenticationService {
 	declare readonly _serviceBrand: undefined;
 
+	/**
+	 * Event emitter that fires when authentication is completed successfully
+	 * @event
+	 */
 	private _onDidAuthenticate: Emitter<CSAuthenticationSession> = this._register(new Emitter<CSAuthenticationSession>());
 	readonly onDidAuthenticate: Event<CSAuthenticationSession> = this._onDidAuthenticate.event;
 
+	/**
+	 * Base URL for the CodeStory API endpoints
+	 * Changes based on development/production environment
+	 */
 	private _subscriptionsAPIBase: string | null = null;
+
+	/**
+	 * Base URL for the CodeStory website
+	 * Changes based on development/production environment
+	 */
 	private _websiteBase: string | null = null;
 
+	/**
+	 * Array of pending authentication state identifiers
+	 * Used to track ongoing authentication requests
+	 */
 	private _pendingStates: string[] = [];
+
+	/**
+	 * Current authentication session
+	 * Contains user data, tokens, and subscription information
+	 */
 	private _session: CSAuthenticationSession | undefined;
 
 	constructor(
