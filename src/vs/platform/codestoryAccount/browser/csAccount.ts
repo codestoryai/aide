@@ -23,6 +23,10 @@ import './media/csAccount.css';
 const $ = dom.$;
 const STORAGE_KEY = 'csAccount.requestCount';
 
+/**
+ * Implementation of the CodeStory Account Service for browser environments.
+ * Manages user authentication, account UI, and subscription validation.
+ */
 export class CSAccountService extends Disposable implements ICSAccountService {
 	_serviceBrand: undefined;
 
@@ -45,6 +49,7 @@ export class CSAccountService extends Disposable implements ICSAccountService {
 	) {
 		super();
 
+		// Set website base URL based on environment
 		const isDevelopment = !this.environmentService.isBuilt || this.environmentService.isExtensionDevelopment;
 		if (isDevelopment) {
 			this._websiteBase = 'https://staging.aide.dev';
@@ -56,6 +61,10 @@ export class CSAccountService extends Disposable implements ICSAccountService {
 		this.refresh();
 	}
 
+	/**
+	 * Refreshes the current authentication session.
+	 * Retrieves the session from the authentication service and updates the local state.
+	 */
 	private async refresh(): Promise<void> {
 		const session = await this.csAuthenticationService.getSession();
 		if (session) {
@@ -65,6 +74,9 @@ export class CSAccountService extends Disposable implements ICSAccountService {
 		}
 	}
 
+	/**
+	 * Toggles the visibility of the account card in the UI.
+	 */
 	toggle(): void {
 		if (!this.isVisible.get()) {
 			this.show();
@@ -75,6 +87,11 @@ export class CSAccountService extends Disposable implements ICSAccountService {
 		}
 	}
 
+	/**
+	 * Ensures the user is authorized and has a valid subscription.
+	 * Shows the account card if not authenticated and validates subscription status.
+	 * @returns Promise<boolean> True if user is authorized, false otherwise.
+	 */
 	async ensureAuthorized(): Promise<boolean> {
 		const count = this.storageService.getNumber(STORAGE_KEY, StorageScope.PROFILE, 0);
 		try {
@@ -120,7 +137,7 @@ export class CSAccountService extends Disposable implements ICSAccountService {
 						}
 					]
 				);
-				return false; // User is not on the trial period
+				return false;
 			}
 		} catch (error) {
 			// Handle any errors that occurred during the authentication
@@ -130,6 +147,10 @@ export class CSAccountService extends Disposable implements ICSAccountService {
 		}
 	}
 
+	/**
+	 * Displays the account card UI.
+	 * Shows different UI based on authentication status.
+	 */
 	private async show(): Promise<void> {
 		const container = this.layoutService.activeContainer;
 		const csAccountCard = this.csAccountCard = dom.append(container, $('.cs-account-card'));
@@ -138,7 +159,7 @@ export class CSAccountService extends Disposable implements ICSAccountService {
 		}
 
 		if (this.authenticatedSession) {
-			// User is signed in
+			// User is signed in - show profile information
 			const user = this.authenticatedSession.account;
 			const profileRow = dom.append(this.csAccountCard, $('.profile-row'));
 			if (user.profile_picture_url) {
@@ -170,7 +191,7 @@ export class CSAccountService extends Disposable implements ICSAccountService {
 				});
 			}));
 		} else {
-			// User is not signed in
+			// User is not signed in - show login UI
 			const loginPrompt = dom.append(this.csAccountCard, $('.login-prompt'));
 			loginPrompt.textContent = 'Log in to CodeStory Account';
 			const loginDescription = dom.append(this.csAccountCard, $('.login-description'));
@@ -189,6 +210,9 @@ export class CSAccountService extends Disposable implements ICSAccountService {
 		}
 	}
 
+	/**
+	 * Removes the account card from the UI.
+	 */
 	private hide(): void {
 		if (this.csAccountCard) {
 			this.csAccountCard.remove();
