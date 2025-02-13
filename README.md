@@ -41,8 +41,8 @@ please see the document **[How to Contribute](https://github.com/codestoryai/aid
 ## Feedback
 
 * [File an issue](https://github.com/codestoryai/aide/issues)
-* [Request a new feature](CONTRIBUTING.md)
-* Upvote [popular feature requests](https://github.com/codestoryai/aide/issues?q=is%3Aopen+is%3Aissue+label%3Afeature-request+sort%3Areactions-%2B1-desc)
+* [Request a new feature](https://github.com/codestoryai/aide/issues/new?template=idea.yml)
+* Upvote [popular feature requests](https://github.com/codestoryai/aide/issues?q=is%3Aopen+is%3Aissue+label%3Aenhancement+sort%3Areactions-%2B1-desc)
 * Join our community: [Discord](https://discord.gg/mtgrhXM5Xf)
 
 ## Code of Conduct
