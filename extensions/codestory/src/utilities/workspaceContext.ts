@@ -92,10 +92,22 @@ export class ProjectContext {
 		this.contentIndicators.set(fileName, indicatorFunction);
 	}
 
+	function safeJSONParse(text: string): any {
+		try {
+			text = text.replace(/^\uFEFF/, '').trim();
+			return JSON.parse(text);
+		} catch (error) {
+			console.error('Failed to parse JSON:', error);
+			console.error('Raw content:', text);
+			throw error;
+		}
+	}
+
 	collectPackageJsonIndicators(fileContent: string): string[] {
 		const labels = [];
-		const parsedContent = JSON.parse(fileContent);
-		const dependencies = parsedContent.dependencies;
+		try {
+			const parsedContent = safeJSONParse(fileContent);
+			const dependencies = parsedContent.dependencies;
 		const devDependencies = parsedContent.devDependencies;
 		if (dependencies) {
 			if (dependencies['@angular/core']) {

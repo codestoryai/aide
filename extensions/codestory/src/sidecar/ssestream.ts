@@ -30,40 +30,54 @@ export async function* callServerEvent(url: string): AsyncIterableIterator<strin
 }
 
 class BufferedStream {
-	private _buffer: string[];
+    private _buffer: string[];
+    private _currentEvent: string[];
 
-	constructor() {
-		this._buffer = [];
-	}
+    constructor() {
+        this._buffer = [];
+        this._currentEvent = [];
+    }
 
-	public transform(chunk: string): string[] {
-		const finalAnswer: string[] = [];
+    public transform(chunk: string): string[] {
+        const finalAnswer: string[] = [];
 
-		for (let i = 0, len = chunk.length; i < len; ++i) {
+        for (let i = 0, len = chunk.length; i < len; ++i) {
+            // Handle line endings
+            if (chunk[i] === '\n') {
+                const line = this._buffer.join('');
+                this._buffer = [];
 
-			// axum sends \n\n as the separator between events
-			// log when we have a hit for this
-			let isEventSeparator = false;
-			if (i !== 0) {
-				isEventSeparator = chunk[i] === '\n' && chunk[i - 1] === '\n';
-			}
+                // Skip empty lines
+                if (!line.trim()) {
+                    // Empty line marks end of event
+                    if (this._currentEvent.length > 0) {
+                        const event = this._currentEvent.join('\n');
+                        if (event.includes('data:')) {
+                            finalAnswer.push(event);
+                        }
+                        this._currentEvent = [];
+                    }
+                    continue;
+                }
 
-			// Keep buffering unless we've hit the end of an event
-			if (!isEventSeparator) {
-				this._buffer.push(chunk[i]);
-				continue;
-			}
+                this._currentEvent.push(line);
+                continue;
+            }
 
-			const event = this._buffer.join('');
+            this._buffer.push(chunk[i]);
+        }
 
-			if (event) {
-				finalAnswer.push(event);
-			}
+        // Handle any remaining buffer at the end of chunk
+        if (this._buffer.length > 0) {
+            const line = this._buffer.join('');
+            if (line.trim()) {
+                this._currentEvent.push(line);
+            }
+            this._buffer = [];
+        }
 
-			this._buffer = [];
-		}
-		return finalAnswer;
-	}
+        return finalAnswer;
+    }
 }
 
 export async function* callServerEventStreamingBufferedGET(url: string): AsyncIterableIterator<string> {
