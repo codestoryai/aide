@@ -87,7 +87,7 @@ export const saveCodeStoryStorageObjectToStorage = async (
 	await ensureDirectoryExists(pathForStorage);
 	const codeStoryStorageString = JSON.stringify(codeStoryStorage);
 	fs.writeFileSync(pathForStorage, codeStoryStorageString);
-	return JSON.parse(codeStoryStorageString) as CodeStoryStorage;
+	return parseCodeStoryStorage(codeStoryStorageString);
 };
 
 export const loadOrSaveToStorage = async (

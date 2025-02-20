@@ -22,6 +22,22 @@ import { ConversationMessage, EditFileResponse, getSideCarModelConfiguration, Id
 import { sidecarUsesAgentReasoning } from '../utilities/agentConfiguration';
 import { readAideRulesContent } from '../utilities/aideRules';
 
+function safeJSONParse(text: string): any {
+    try {
+        // Remove any potential BOM characters and whitespace
+        text = text.replace(/^\uFEFF/, '').trim();
+        // Handle double-encoded JSON if needed
+        if (text.startsWith('"') && text.endsWith('"')) {
+            text = JSON.parse(text);
+        }
+        return JSON.parse(text);
+    } catch (error) {
+        console.error('Failed to parse JSON:', error);
+        console.error('Raw content:', text);
+        throw error;
+    }
+}
+
 export enum CompletionStopReason {
 	/**
 	 * Used to signal to the completion processing code that we're still streaming.
@@ -153,15 +169,15 @@ export class SideCarClient {
 		const url = baseUrl.toString();
 		const asyncIterableResponse = await callServerEventStreamingBufferedGET(url);
 		for await (const line of asyncIterableResponse) {
-			const lineParts = line.split('data:{');
-			for (const lineSinglePart of lineParts) {
-				const lineSinglePartTrimmed = lineSinglePart.trim();
-				if (lineSinglePartTrimmed === '') {
-					continue;
-				}
-				const finalString = '{' + lineSinglePartTrimmed;
-				const syncUpdate = JSON.parse(finalString) as SyncUpdate;
+			if (!line.includes('data:')) continue;
+			
+			try {
+				const jsonStr = line.substring(line.indexOf('data:') + 5).trim();
+				const syncUpdate = safeJSONParse(jsonStr) as SyncUpdate;
 				yield syncUpdate;
+			} catch (parseError) {
+				console.error('Failed to parse sync update:', parseError);
+				continue;
 			}
 		}
 	}
@@ -243,21 +259,15 @@ export class SideCarClient {
 		};
 		const asyncIterableResponse = await callServerEventStreamingBufferedPOST(url, body);
 		for await (const line of asyncIterableResponse) {
-			const lineParts = line.split('data:{');
-			for (const lineSinglePart of lineParts) {
-				const lineSinglePartTrimmed = lineSinglePart.trim();
-				if (lineSinglePartTrimmed === '') {
-					continue;
-				}
-				try {
-					// Attempt to parse JSON and yield
-					const editFileResponse = JSON.parse('{' + lineSinglePartTrimmed) as EditFileResponse;
-					yield editFileResponse;
-				} catch (parseError) {
-					// Log problematic content and error details
-					console.error(`Failed to parse JSON. Raw content: '{${lineSinglePartTrimmed}'`);
-					console.error('Parsing error details:', parseError);
-				}
+			if (!line.includes('data:')) continue;
+			
+			try {
+				const jsonStr = line.substring(line.indexOf('data:') + 5).trim();
+				const editFileResponse = safeJSONParse(jsonStr) as EditFileResponse;
+				yield editFileResponse;
+			} catch (parseError) {
+				console.error('Failed to parse edit file response:', parseError);
+				continue;
 			}
 		}
 	}
@@ -671,14 +681,13 @@ export class SideCarClient {
 					stopReason: CompletionStopReason.RequestAborted,
 				};
 			}
-			const lineParts = line.split('data:"{');
-			for (const lineSinglePart of lineParts) {
-				const lineSinglePartTrimmed = lineSinglePart.trim();
-				if (lineSinglePartTrimmed === '') {
-					continue;
-				}
-				const finalString = '{' + lineSinglePartTrimmed.slice(0, -1);
-				const editFileResponse = JSON.parse(JSON.parse(`"${finalString}"`)) as CompletionResponse;
+			if (!line.includes('data:')) continue;
+			
+			try {
+				const jsonStr = line.substring(line.indexOf('data:') + 5).trim();
+				// Handle double-encoded JSON from completion endpoint
+				const decodedStr = JSON.parse(jsonStr);
+				const editFileResponse = safeJSONParse(decodedStr) as CompletionResponse;
 				// take the first provided completion here
 				if (editFileResponse.completions.length > 0) {
 					finalAnswer = editFileResponse.completions[0].insertText;
@@ -1182,14 +1191,15 @@ export class SideCarClient {
 
 		const asyncIterableResponse = callServerEventStreamingBufferedPOST(url, body);
 		for await (const line of asyncIterableResponse) {
-			const lineParts = line.split('data:{');
-			for (const lineSinglePart of lineParts) {
-				const lineSinglePartTrimmed = lineSinglePart.trim();
-				if (lineSinglePartTrimmed === '') {
-					continue;
-				}
-				const conversationMessage = JSON.parse('{' + lineSinglePartTrimmed) as SideCarAgentEvent;
-				yield conversationMessage;
+			if (!line.includes('data:')) continue;
+			
+			try {
+				const jsonStr = line.substring(line.indexOf('data:') + 5).trim();
+				const message = safeJSONParse(jsonStr) as SideCarAgentEvent;
+				yield message;
+			} catch (parseError) {
+				console.error('Failed to parse user feedback event:', parseError);
+				continue;
 			}
 		}
 	}

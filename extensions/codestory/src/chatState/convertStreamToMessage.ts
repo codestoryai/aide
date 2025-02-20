@@ -143,10 +143,22 @@ export const reportProcUpdateToChat = (
 	}
 };
 
+function safeJSONParse(text: string): any {
+    try {
+        text = text.replace(/^\uFEFF/, '').trim();
+        return JSON.parse(text);
+    } catch (error) {
+        console.error('Failed to parse JSON:', error);
+        console.error('Raw content:', text);
+        throw error;
+    }
+}
+
 export const readJsonFile = (filePath: string): any => {
 	const jsonString = fs.readFileSync(filePath, 'utf-8');
-	return JSON.parse(jsonString);
+	return safeJSONParse(jsonString);
 };
+
 
 
 // const randomInt = (min: number, max: number) =>
