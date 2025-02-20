@@ -736,9 +736,15 @@ export class AideAgentSessionProvider implements vscode.AideSessionParticipant {
 							responseStream.stream.toolTypeError({
 								message: `Usage limit exceeded. Please upgrade.`
 							});
+						} else if (error_string === 'wrong tool output') {
+							responseStream.stream.toolTypeError({
+								message: LLM_FORMAT_ERROR_MESSAGE
+							});
+							responseStream.stream.stage({ message: 'Error' });
+							errorCallback?.();
 						} else {
 							responseStream.stream.toolTypeError({
-								message: `The LLM that you're using right now returned a response that does not adhere to the format our framework expects, and thus this request has failed. If you keep seeing this error, this is likely because the LLM is unable to follow our system instructions and it is recommended to switch over to one of our recommended models instead.`
+								message: LLM_FORMAT_ERROR_MESSAGE
 							});
 							responseStream.stream.stage({ message: 'Error' });
 							errorCallback?.();
@@ -949,7 +955,7 @@ export class AideAgentSessionProvider implements vscode.AideSessionParticipant {
 			}
 
 			responseStream.stream.toolTypeError({
-				message: `${error.message}. Please try again.`
+				message: error instanceof SidecarConnectionFailedError ? error.message : LLM_FORMAT_ERROR_MESSAGE
 			});
 			responseStream.stream.stage({ message: 'Error' });
 			errorCallback?.();
