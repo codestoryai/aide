@@ -57,16 +57,22 @@ async function getHealthCheckURL(): Promise<string> {
 }
 
 async function healthCheck(): Promise<boolean> {
-	try {
-		const healthCheckURL = await getHealthCheckURL();
-		const response = await fetch(healthCheckURL);
-		const isHealthy = response.status === 200;
-		vscode.sidecar.setRunningStatus(vscode.SidecarRunningStatus.Connected);
-		return isHealthy;
-	} catch (e) {
-		console.error('Health check failed with error:', e);
-		return false;
-	}
+    try {
+        const healthCheckURL = await getHealthCheckURL();
+        console.log('Performing health check at:', healthCheckURL);
+        const response = await fetch(healthCheckURL);
+        const isHealthy = response.status === 200;
+        if (!isHealthy) {
+            console.error('Health check failed with status:', response.status);
+            console.error('Health check response:', await response.text());
+        }
+        vscode.sidecar.setRunningStatus(isHealthy ? vscode.SidecarRunningStatus.Connected : vscode.SidecarRunningStatus.Unavailable);
+        return isHealthy;
+    } catch (e) {
+        console.error('Health check failed with error:', e);
+        vscode.sidecar.setRunningStatus(vscode.SidecarRunningStatus.Unavailable);
+        return false;
+    }
 }
 
 type VersionAPIResponse = {
@@ -338,108 +344,122 @@ export async function restartSidecarBinary(extensionBasePath: string) {
 }
 
 export async function setupSidecar(extensionBasePath: string): Promise<vscode.Disposable> {
-	const { zipDestination, extractedDestination, webserverPath } = getPaths(extensionBasePath);
+    const { zipDestination, extractedDestination, webserverPath } = getPaths(extensionBasePath);
 
-	// If user is self-managing sidecar, only do health checks
-	if (sidecarUseSelfRun()) {
-		console.log('User is self-managing sidecar binary, skipping automated setup');
-		const hc = await healthCheck();
-		if (!hc) {
-			console.log('Sidecar health check failed');
-			vscode.sidecar.setRunningStatus(vscode.SidecarRunningStatus.Unavailable);
-			vscode.window.showWarningMessage('Sidecar is not running. Please start the sidecar binary manually as configured.');
-		}
+    // If user is self-managing sidecar, only do health checks
+    if (sidecarUseSelfRun()) {
+        console.log('User is self-managing sidecar binary, skipping automated setup');
+        const hc = await healthCheck();
+        if (!hc) {
+            console.log('Sidecar health check failed');
+            vscode.sidecar.setRunningStatus(vscode.SidecarRunningStatus.Unavailable);
+            vscode.window.showErrorMessage('Sidecar is not running. Please check if the sidecar binary is running at the configured URL: ' + sidecarURL());
+        }
 
-		// Set up recurring health check every 5 seconds
-		const healthCheckInterval = setInterval(async () => {
-			const isHealthy = await healthCheck();
-			if (!isHealthy) {
-				console.log('Sidecar health check failed');
-				vscode.sidecar.setRunningStatus(vscode.SidecarRunningStatus.Unavailable);
-			} else {
-				versionCheck();
-			}
-		}, 5000);
+        // Set up recurring health check every 5 seconds
+        const healthCheckInterval = setInterval(async () => {
+            const isHealthy = await healthCheck();
+            if (!isHealthy) {
+                console.log('Sidecar health check failed');
+                vscode.sidecar.setRunningStatus(vscode.SidecarRunningStatus.Unavailable);
+                vscode.window.showErrorMessage('Lost connection to sidecar. Please check if the sidecar binary is still running.');
+            } else {
+                versionCheck();
+            }
+        }, 5000);
 
-		return vscode.Disposable.from({ dispose: () => clearInterval(healthCheckInterval) });
-	}
+        return vscode.Disposable.from({ dispose: () => clearInterval(healthCheckInterval) });
+    }
 
-	// Regular automated setup flow
-	if (!fs.existsSync(webserverPath)) {
-		vscode.sidecar.setRunningStatus(vscode.SidecarRunningStatus.Starting);
-		try {
-			await fetchSidecarWithProgress(zipDestination);
-			await unzipSidecarArchive(zipDestination, extractedDestination, webserverPath);
-		} catch (error) {
-			console.error('Failed to set up sidecar binary:', error);
-			vscode.sidecar.setRunningStatus(vscode.SidecarRunningStatus.Unavailable);
-			throw error;
-		}
-	}
+    // Regular automated setup flow
+    if (!fs.existsSync(webserverPath)) {
+        vscode.sidecar.setRunningStatus(vscode.SidecarRunningStatus.Starting);
+        try {
+            console.log('Downloading sidecar binary to:', zipDestination);
+            await fetchSidecarWithProgress(zipDestination);
+            console.log('Extracting sidecar binary to:', extractedDestination);
+            await unzipSidecarArchive(zipDestination, extractedDestination, webserverPath);
+        } catch (error) {
+            console.error('Failed to set up sidecar binary:', error);
+            vscode.sidecar.setRunningStatus(vscode.SidecarRunningStatus.Unavailable);
+            vscode.window.showErrorMessage(`Failed to setup sidecar binary: ${error.message}. Please try restarting VS Code.`);
+            throw error;
+        }
+    }
 
-	const hc = await healthCheck();
-	if (!hc) {
-		await startSidecarBinary(webserverPath);
-	}
+    const hc = await healthCheck();
+    if (!hc) {
+        try {
+            await startSidecarBinary(webserverPath);
+        } catch (error) {
+            console.error('Failed to start sidecar binary:', error);
+            vscode.window.showErrorMessage(`Failed to start sidecar binary: ${error.message}. Please try restarting VS Code.`);
+            throw error;
+        }
+    }
 
-	// Asynchronously check for updates
-	checkForUpdates(zipDestination);
+    // Asynchronously check for updates
+    checkForUpdates(zipDestination).catch(error => {
+        console.error('Failed to check for updates:', error);
+    });
 
-	// Set up recurring health check every 5 seconds to recover sidecar
-	const healthCheckInterval = setInterval(async () => {
-		// Skip health check if we're in the middle of a restart
-		if (isRestarting) {
-			console.log('Skipping health check during restart...');
-			return;
-		}
+    // Set up recurring health check every 5 seconds to recover sidecar
+    const healthCheckInterval = setInterval(async () => {
+        // Skip health check if we're in the middle of a restart
+        if (isRestarting) {
+            console.log('Skipping health check during restart...');
+            return;
+        }
 
-		const isHealthy = await healthCheck();
-		if (isHealthy) {
-			versionCheck();
-		} else {
-			console.log('Health check failed, attempting recovery...');
-			// Set to Connecting first to indicate we're trying to reconnect
-			vscode.sidecar.setRunningStatus(vscode.SidecarRunningStatus.Connecting);
+        const isHealthy = await healthCheck();
+        if (isHealthy) {
+            versionCheck();
+        } else {
+            console.log('Health check failed, attempting recovery...');
+            // Set to Connecting first to indicate we're trying to reconnect
+            vscode.sidecar.setRunningStatus(vscode.SidecarRunningStatus.Connecting);
 
-			// First try: Attempt to restart using existing binary
-			try {
-				console.log('Attempting to restart sidecar with existing binary...');
-				await restartSidecarBinary(extensionBasePath);
-				const recoveryCheck = await retryHealthCheck(3, 1000);
-				if (recoveryCheck) {
-					console.log('Successfully recovered sidecar using existing binary');
-					return;
-				}
-			} catch (error) {
-				console.log('Failed to restart with existing binary:', error);
-			}
+            // First try: Attempt to restart using existing binary
+            try {
+                console.log('Attempting to restart sidecar with existing binary...');
+                await restartSidecarBinary(extensionBasePath);
+                const recoveryCheck = await retryHealthCheck(3, 1000);
+                if (recoveryCheck) {
+                    console.log('Successfully recovered sidecar using existing binary');
+                    return;
+                }
+            } catch (error) {
+                console.log('Failed to restart with existing binary:', error);
+            }
 
-			// Second try: Binary might be missing, try fresh download and start
-			try {
-				console.log('Attempting fresh download and start...');
-				// Kill any existing process first
-				await killSidecar();
+            // Second try: Binary might be missing, try fresh download and start
+            try {
+                console.log('Attempting fresh download and start...');
+                // Kill any existing process first
+                await killSidecar();
 
-				// Fresh download and start
-				await fetchSidecarWithProgress(zipDestination);
-				await startSidecarBinary(webserverPath);
+                // Fresh download and start
+                await fetchSidecarWithProgress(zipDestination);
+                await unzipSidecarArchive(zipDestination, extractedDestination, webserverPath);
+                await startSidecarBinary(webserverPath);
 
-				const freshStartCheck = await retryHealthCheck(3, 1000);
-				if (freshStartCheck) {
-					console.log('Successfully recovered sidecar with fresh download');
-					return;
-				}
-			} catch (error) {
-				console.error('Failed to recover sidecar after fresh download:', error);
-			}
+                const freshStartCheck = await retryHealthCheck(3, 1000);
+                if (freshStartCheck) {
+                    console.log('Successfully recovered sidecar with fresh download');
+                    return;
+                }
+            } catch (error) {
+                console.error('Failed to recover sidecar after fresh download:', error);
+                vscode.window.showErrorMessage('Failed to recover sidecar. Please try manually downloading the sidecar binary from https://aide-updates.codestory.ai');
+            }
 
-			// If we get here, all recovery attempts failed
-			console.error('All recovery attempts failed');
-			vscode.sidecar.setRunningStatus(vscode.SidecarRunningStatus.Unavailable);
-			vscode.window.showErrorMessage('Failed to recover sidecar after multiple attempts. Please try restarting Aide.');
-		}
-	}, 5000);
+            // If we get here, all recovery attempts failed
+            console.error('All recovery attempts failed');
+            vscode.sidecar.setRunningStatus(vscode.SidecarRunningStatus.Unavailable);
+            vscode.window.showErrorMessage('Failed to recover sidecar after multiple attempts. Please try restarting VS Code or manually downloading the sidecar binary.');
+        }
+    }, 5000);
 
-	// Clean up interval when extension is deactivated
-	return vscode.Disposable.from({ dispose: () => clearInterval(healthCheckInterval) });
+    // Clean up interval when extension is deactivated
+    return vscode.Disposable.from({ dispose: () => clearInterval(healthCheckInterval) });
 }
