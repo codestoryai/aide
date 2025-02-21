@@ -6,3 +6,6 @@ contact_links:
   - name: Extension Development
     url: https://github.com/microsoft/vscode-discussions/discussions
     about: Please use this for extension development questions and ideas.
+  - name: Billing & Subscription Issues
+    url: https://code.visualstudio.com/docs/supporting/FAQ#_subscription-and-billing
+    about: For questions about subscriptions, billing, or refunds, please visit our FAQ or contact billing support.

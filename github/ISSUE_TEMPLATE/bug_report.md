@@ -8,6 +8,7 @@ about: Create a report to help us improve
 <!-- 🔎 Search existing issues to avoid creating duplicates. -->
 <!-- 🧪 Test using the latest Insiders build to see if your issue has already been fixed: https://code.visualstudio.com/insiders/ -->
 <!-- 💡 Instead of creating your report here, use 'Report Issue' from the 'Help' menu in VS Code to pre-fill useful information. -->
+<!-- ⚠️ For subscription, billing, or refund related issues, please visit: https://code.visualstudio.com/docs/supporting/FAQ#_subscription-and-billing -->
 <!-- 🔧 Launch with `code --disable-extensions` to check. -->
 Does this issue occur when all extensions are disabled?: Yes/No
 
