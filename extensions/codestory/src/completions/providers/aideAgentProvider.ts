@@ -701,9 +701,15 @@ export class AideAgentSessionProvider implements vscode.AideSessionParticipant {
 							responseStream.stream.toolTypeError({
 								message: `Usage limit exceeded. Please upgrade.`
 							});
+						} else if (error_string === 'wrong tool output') {
+							responseStream.stream.toolTypeError({
+								message: `The LLM that you're using right now (Claude Sonnet/Haiku or Gemini 1.5 Pro) returned a response that does not adhere to the format our framework expects, and thus this request has failed. This is because these models may not fully support the Agentic IDE mode yet. We recommend switching to GPT-4 or another OpenAI model for the best experience with Agentic IDE.`
+							});
+							responseStream.stream.stage({ message: 'Error' });
+							errorCallback?.();
 						} else {
 							responseStream.stream.toolTypeError({
-								message: `The LLM that you're using right now returned a response that does not adhere to the format our framework expects, and thus this request has failed. If you keep seeing this error, this is likely because the LLM is unable to follow our system instructions and it is recommended to switch over to one of our recommended models instead.`
+								message: `${event.event.FrameworkEvent.ToolCallError.error_string}.\n\nWe\'d appreciate it if you could report this session using the feedback tool above - this is on us. Please try again.`
 							});
 							responseStream.stream.stage({ message: 'Error' });
 							errorCallback?.();
