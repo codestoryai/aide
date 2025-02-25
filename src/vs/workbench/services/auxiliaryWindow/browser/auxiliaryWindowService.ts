@@ -128,7 +128,12 @@ export class AuxiliaryWindow extends BaseWindow implements IAuxiliaryWindow {
 
 		this._register(addDisposableListener(this.window, EventType.RESIZE, () => this.layout()));
 
-		this._register(addDisposableListener(this.container, EventType.SCROLL, () => this.container.scrollTop = 0)); 						// Prevent container from scrolling (#55456)
+		this._register(addDisposableListener(this.container, EventType.SCROLL, (e: Event) => {
+			// Only prevent scrolling if it's not from a user interaction or programmatic scroll
+			if (!e.isTrusted || !this.container.contains(document.activeElement)) {
+				this.container.scrollTop = 0;
+			}
+		})); 						// Prevent unwanted automatic scrolling while allowing user interaction (#55456)
 
 		if (isWeb) {
 			this._register(addDisposableListener(this.container, EventType.DROP, e => EventHelper.stop(e, true))); 							// Prevent default navigation on drop
