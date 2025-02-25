@@ -89,6 +89,24 @@ class SidecarConnectionFailedError extends Error {
 	}
 }
 
+// Helper function to handle LLM format errors consistently
+function isLLMFormatError(errorMessage: string): boolean {
+	const formatErrorIndicators = [
+		'wrong tool output',
+		'does not adhere to the format',
+		'unable to follow our system instructions',
+		'invalid response format',
+		'malformed response'
+	];
+	
+	return formatErrorIndicators.some(indicator => 
+		errorMessage.toLowerCase().includes(indicator.toLowerCase())
+	);
+}
+
+const LLM_FORMAT_ERROR_MESSAGE = `The LLM that you're using right now returned a response that does not adhere to the format our framework expects, and thus this request has failed. If you keep seeing this error, this is likely because the LLM is unable to follow our system instructions and it is recommended to switch over to one of our recommended models instead.`;
+
+
 
 export class AideAgentSessionProvider implements vscode.AideSessionParticipant {
 	private aideAgent: vscode.AideSessionAgent;
@@ -499,9 +517,17 @@ export class AideAgentSessionProvider implements vscode.AideSessionParticipant {
 			if (!responseStream) {
 				throw error;
 			}
-			responseStream.stream.toolTypeError({
-				message: `${error.message}. Please try again.`,
-			});
+			
+			const errorMessage = error.message || '';
+			if (isLLMFormatError(errorMessage)) {
+				responseStream.stream.toolTypeError({
+					message: LLM_FORMAT_ERROR_MESSAGE
+				});
+			} else {
+				responseStream.stream.toolTypeError({
+					message: `${errorMessage}. Please try again.`
+				});
+			}
 			responseStream.stream.stage({ message: 'Error' });
 
 			// Clean up any open streams
@@ -701,9 +727,15 @@ export class AideAgentSessionProvider implements vscode.AideSessionParticipant {
 							responseStream.stream.toolTypeError({
 								message: `Usage limit exceeded. Please upgrade.`
 							});
+						} else if (isLLMFormatError(error_string)) {
+							responseStream.stream.toolTypeError({
+								message: LLM_FORMAT_ERROR_MESSAGE
+							});
+							responseStream.stream.stage({ message: 'Error' });
+							errorCallback?.();
 						} else {
 							responseStream.stream.toolTypeError({
-								message: `The LLM that you're using right now returned a response that does not adhere to the format our framework expects, and thus this request has failed. If you keep seeing this error, this is likely because the LLM is unable to follow our system instructions and it is recommended to switch over to one of our recommended models instead.`
+								message: `${error_string}.\n\nWe\'d appreciate it if you could report this session using the feedback tool above - this is on us. Please try again.`
 							});
 							responseStream.stream.stage({ message: 'Error' });
 							errorCallback?.();
@@ -913,9 +945,16 @@ export class AideAgentSessionProvider implements vscode.AideSessionParticipant {
 				throw error;
 			}
 
-			responseStream.stream.toolTypeError({
-				message: `${error.message}. Please try again.`
-			});
+			const errorMessage = error.message || '';
+			if (isLLMFormatError(errorMessage)) {
+				responseStream.stream.toolTypeError({
+					message: LLM_FORMAT_ERROR_MESSAGE
+				});
+			} else {
+				responseStream.stream.toolTypeError({
+					message: `${errorMessage}. Please try again.`
+				});
+			}
 			responseStream.stream.stage({ message: 'Error' });
 			errorCallback?.();
 
