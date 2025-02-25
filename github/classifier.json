@@ -188,6 +188,7 @@
 		"quick-open": {"assign": ["TylerLeonhardt"]},
 		"quick-pick": {"assign": ["TylerLeonhardt"]},
 		"references-viewlet": {"assign": ["jrieken"]},
+		"refund": {"assign": ["TylerLeonhardt", "sandy081"]},
 		"release-notes": {"assign": []},
 		"remote": {"assign": []},
 		"remote-connection": {"assign": ["alexdima"]},

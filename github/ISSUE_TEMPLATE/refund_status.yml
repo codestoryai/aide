@@ -1,0 +1,45 @@
+name: Refund Status
+description: Share your refund status to help track refund processing
+title: "[Refund] - "
+labels: ["refund"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please share your refund status to help track refund processing times and outcomes.
+  
+  - type: dropdown
+    id: refund_status
+    attributes:
+      label: Current Refund Status
+      options:
+        - Requested
+        - In Progress
+        - Received
+        - Denied
+    validations:
+      required: true
+
+  - type: input
+    id: request_date
+    attributes:
+      label: When did you request the refund?
+      placeholder: "YYYY-MM-DD"
+    validations:
+      required: true
+
+  - type: input
+    id: amount
+    attributes:
+      label: Refund Amount
+      description: The amount you requested for refund
+      placeholder: "e.g. $50.00"
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional_info
+    attributes:
+      label: Additional Information
+      description: Any additional details about your refund experience
+      placeholder: "Share any relevant details about your refund process..."
