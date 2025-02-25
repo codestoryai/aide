@@ -3048,6 +3048,7 @@ export namespace AideAgentRequest {
 			location: ChatLocation.to(request.location),
 			location2,
 			isDevtoolsContext: request.isDevtoolsContext,
+			inputTokens: request.inputTokens,
 		};
 	}
 }

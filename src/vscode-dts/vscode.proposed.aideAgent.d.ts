@@ -65,6 +65,7 @@ declare module 'vscode' {
 		readonly location: ChatLocation;
 		readonly location2: ChatRequestEditorData | ChatRequestNotebookData | undefined;
 		readonly isDevtoolsContext: boolean;
+		readonly inputTokens?: number;
 	}
 
 	export interface AideAgentPlanStepPart {
