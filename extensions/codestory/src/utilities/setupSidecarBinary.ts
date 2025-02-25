@@ -14,6 +14,9 @@ import { killProcessOnPort } from './killPort';
 import { sidecarURL, sidecarUseSelfRun } from './sidecarUrl';
 import { unzip } from './unzip';
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const productJson = require('../../../../../product.json');
+
 const updateBaseURL = `https://aide-updates.codestory.ai/api/update/sidecar`;
 
 function getPaths(extensionBasePath: string) {
@@ -79,7 +82,14 @@ async function versionCheck(): Promise<VersionAPIResponse | undefined> {
 		const response = await fetch(`${sidecarURL()}/api/version`);
 		if (response.status === 200) {
 			const versionData = await response.json() as VersionAPIResponse;
-			vscode.sidecar.setVersion(versionData.package_version ?? 'unknown');
+			const version = versionData.package_version ?? 'unknown';
+			
+			// Set the version for the About section if configured in product.json
+			if ((productJson as any).sidecarInfo?.displayInAbout) {
+				vscode.sidecar.setVersion(version);
+				console.log(`Setting sidecar version for About section: ${version}`);
+			}
+			
 			return versionData;
 		} else {
 			return undefined;
@@ -133,9 +143,27 @@ async function checkForUpdates(zipDestination: string) {
 	const response = await fetch(updateURL);
 	if (response.status === 200) {
 		const data = await response.json() as UpdateAPIResponse;
-		if (gt(data.package_version, currentVersionResponse.package_version)) {
+		
+		// Get required version from product.json if available
+		const requiredVersion = (productJson as any).sidecarInfo?.requiredVersion || 'latest';
+		
+		if (requiredVersion !== 'latest' && requiredVersion !== currentVersionResponse.package_version) {
+			console.log(`Sidecar version mismatch: current=${currentVersionResponse.package_version}, required=${requiredVersion}`);
+			vscode.window.showWarningMessage(
+				`Sidecar version (${currentVersionResponse.package_version}) doesn't match required version (${requiredVersion}). Updating...`,
+				'OK'
+			);
+			await fetchSidecarWithProgress(zipDestination, requiredVersion);
+		} else if (gt(data.package_version, currentVersionResponse.package_version)) {
 			console.log(`New sidecar version available: ${data.package_version}`);
-			await fetchSidecarWithProgress(zipDestination, data.package_version);
+			const result = await vscode.window.showInformationMessage(
+				`New Sidecar version available: ${data.package_version}. Current version: ${currentVersionResponse.package_version}`,
+				'Update Now', 'Later'
+			);
+			
+			if (result === 'Update Now') {
+				await fetchSidecarWithProgress(zipDestination, data.package_version);
+			}
 		} else {
 			console.log(`Current sidecar version is up to date: ${currentVersionResponse.package_version}`);
 			return;
