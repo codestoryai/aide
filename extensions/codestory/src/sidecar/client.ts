@@ -141,9 +141,23 @@ export class SideCarClient {
 	}
 
 	async getRepoStatus(): Promise<RepoStatus> {
-		const response = await fetch(this.getRepoListUrl());
-		const repoList = (await response.json()) as RepoStatus;
-		return repoList;
+		try {
+			const response = await fetch(this.getRepoListUrl());
+			if (!response.ok) {
+				return { 
+					repo_map: {}, 
+					error: `Failed to fetch repository status: ${response.statusText}` 
+				};
+			}
+			const repoList = (await response.json()) as RepoStatus;
+			return repoList;
+		} catch (error) {
+			console.error('Error fetching repository status:', error);
+			return { 
+				repo_map: {}, 
+				error: `Internal server error: Tool error: Repo map error: Tree generation error: No tree generated. ${error instanceof Error ? error.message : String(error)}` 
+			};
+		}
 	}
 
 

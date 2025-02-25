@@ -119,6 +119,7 @@ export type SyncStatus =
 export interface RepoStatus {
 	// The string here is generated from RepoRef.to_string()
 	repo_map: { [key: string]: Repository };
+	error?: string; // Optional error property to store error information when tree generation fails
 }
 
 
