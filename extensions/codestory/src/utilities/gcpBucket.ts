@@ -22,31 +22,66 @@ function ensureDirectoryExists(filePath: string): void {
 }
 
 export const downloadSidecarZip = async (
-	destination: string,
-	version: string = 'latest'
+    destination: string,
+    version: string = 'latest'
 ) => {
-	ensureDirectoryExists(destination);
+    try {
+        ensureDirectoryExists(destination);
 
-	const platform = process.platform;
-	const architecture = process.arch;
-	const source = `${version}/${platform}/${architecture}/sidecar.zip`;
-	try {
-		await downloadUsingURL(source, destination);
-	} catch (err) {
-		console.error(err);
-		throw new Error(`Failed to download sidecar`);
-	}
+        const platform = process.platform;
+        const architecture = process.arch;
+        const source = `${version}/${platform}/${architecture}/sidecar.zip`;
+        console.log(`Downloading sidecar for ${platform}-${architecture} from version ${version}`);
+        
+        await downloadUsingURL(source, destination);
+        console.log('Successfully downloaded sidecar binary');
+    } catch (err) {
+        console.error('Failed to download sidecar:', err);
+        if (err.response) {
+            console.error('Response status:', err.response.status);
+            console.error('Response data:', err.response.data);
+        }
+        throw new Error(`Failed to download sidecar: ${err.message}`);
+    }
 };
 
 const downloadUsingURL = async (source: string, destination: string) => {
-	const url = `https://storage.googleapis.com/${BUCKET_NAME}/${source}`;
-	const response = await axios.get(url, { responseType: 'stream' });
-	const writer = fs.createWriteStream(destination);
+    const url = `https://storage.googleapis.com/${BUCKET_NAME}/${source}`;
+    console.log('Downloading from URL:', url);
+    
+    try {
+        const response = await axios.get(url, { 
+            responseType: 'stream',
+            timeout: 30000 // 30 second timeout
+        });
+        
+        const writer = fs.createWriteStream(destination);
 
-	response.data.pipe(writer);
-
-	return new Promise((resolve, reject) => {
-		writer.on('finish', resolve);
-		writer.on('error', reject);
-	});
+        return new Promise((resolve, reject) => {
+            response.data.pipe(writer);
+            
+            let error: Error | null = null;
+            writer.on('error', err => {
+                error = err;
+                writer.close();
+                reject(err);
+            });
+            
+            writer.on('close', () => {
+                if (!error) {
+                    resolve(true);
+                }
+                // No need to reject here as it would have been handled in the error handler
+            });
+        });
+    } catch (err) {
+        if (err.code === 'ECONNREFUSED') {
+            throw new Error('Connection refused. Please check your internet connection.');
+        } else if (err.code === 'ETIMEDOUT') {
+            throw new Error('Connection timed out. Please try again.');
+        } else if (err.response && err.response.status === 404) {
+            throw new Error(`Sidecar binary not found for your platform (${process.platform}-${process.arch}). Please check https://aide-updates.codestory.ai for supported platforms.`);
+        }
+        throw err;
+    }
 };
