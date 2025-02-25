@@ -576,7 +576,7 @@ export class AideAgentSessionProvider implements vscode.AideSessionParticipant {
 
 					const stream = this.responseStreamCollection.latestResponseStream ?? await this.createNewResponseStream(event.request_id);
 					if (stream) {
-						if (event.event.Error.message.toLowerCase().endsWith('wrong tool output')) {
+						if (event.event.Error.message.toLowerCase().includes('wrong tool output') || event.event.Error.message.toLowerCase().includes('format')) {
 							stream.stream.toolTypeError({
 								message: `The LLM that you're using right now returned a response that does not adhere to the format our framework expects, and thus this request has failed. If you keep seeing this error, this is likely because the LLM is unable to follow our system instructions and it is recommended to switch over to one of our recommended models instead.`
 							});
@@ -701,9 +701,15 @@ export class AideAgentSessionProvider implements vscode.AideSessionParticipant {
 							responseStream.stream.toolTypeError({
 								message: `Usage limit exceeded. Please upgrade.`
 							});
-						} else {
+						} else if (error_string.includes('wrong tool output') || error_string.includes('format')) {
 							responseStream.stream.toolTypeError({
 								message: `The LLM that you're using right now returned a response that does not adhere to the format our framework expects, and thus this request has failed. If you keep seeing this error, this is likely because the LLM is unable to follow our system instructions and it is recommended to switch over to one of our recommended models instead.`
+							});
+							responseStream.stream.stage({ message: 'Error' });
+							errorCallback?.();
+						} else {
+							responseStream.stream.toolTypeError({
+								message: `An error occurred: ${error_string}. Please try again.`
 							});
 							responseStream.stream.stage({ message: 'Error' });
 							errorCallback?.();
