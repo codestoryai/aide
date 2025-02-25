@@ -1909,14 +1909,12 @@ export async function convertVSCodeVariableToSidecarHackingForPlan(
 	}
 
 	return {
-		variables: sidecarVariables,
-		file_content_map: Array.from(resolvedFileCache.entries()).map(([filePath, fileContent]) => {
-			return {
-				file_path: filePath,
-				file_content: fileContent[0],
-				language: fileContent[1],
-			};
-		}),
+		variables: sidecarVariables.length > 0 ? sidecarVariables : undefined,
+		file_content_map: Array.from(resolvedFileCache.entries()).map(([filePath, fileContent]) => ({
+			file_path: filePath,
+			file_content: fileContent[0],
+			language: fileContent[1],
+		})),
 		images: sidecarImages,
 		terminal_selection: undefined,
 		folder_paths: folders,
@@ -2147,7 +2145,7 @@ async function newConvertVSCodeVariableToSidecar(
 	}
 
 	return {
-		variables: sidecarVariables,
+		variables: sidecarVariables.length > 0 ? sidecarVariables : undefined,
 		file_content_map: [],
 		images: [],
 		terminal_selection: undefined,

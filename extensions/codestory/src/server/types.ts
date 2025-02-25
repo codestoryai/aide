@@ -20,7 +20,7 @@ export type SidecarImageContent = {
 };
 
 export type UserContext = {
-	variables: SidecarVariableTypes[];
+	variables: SidecarVariableTypes[] | undefined;  // Make variables optional
 	file_content_map: SidecarFileContent[];
 	images: SidecarImageContent[];
 	terminal_selection: string | undefined;
