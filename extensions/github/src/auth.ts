@@ -87,3 +87,17 @@ export async function getOctokitGraphql(): Promise<graphql> {
 
 	return _octokitGraphql;
 }
+
+export async function assignIssueToSelf(owner: string, repo: string, issueNumber: number): Promise<void> {
+    try {
+        const octokit = await getOctokit();
+        await octokit.issues.addAssignees({
+            owner,
+            repo,
+            issue_number: issueNumber,
+            assignees: [(await octokit.users.getAuthenticated()).data.login]
+        });
+    } catch (err) {
+        throw new Error(`Failed to assign issue: ${err.message}`);
+    }
+}
