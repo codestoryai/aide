@@ -701,6 +701,11 @@ export class AideAgentSessionProvider implements vscode.AideSessionParticipant {
 							responseStream.stream.toolTypeError({
 								message: `Usage limit exceeded. Please upgrade.`
 							});
+						} else if (error_string.includes('Event stream error: Transport error: error decoding response body')) {
+							responseStream.stream.stage({ message: 'Error' });
+							responseStream.stream.toolTypeError({
+								message: `There was an error processing the response from the LLM. We'd appreciate it if you could report this session using the feedback tool above - this is on us. Please try again.`
+							});
 						} else {
 							responseStream.stream.toolTypeError({
 								message: `The LLM that you're using right now returned a response that does not adhere to the format our framework expects, and thus this request has failed. If you keep seeing this error, this is likely because the LLM is unable to follow our system instructions and it is recommended to switch over to one of our recommended models instead.`
