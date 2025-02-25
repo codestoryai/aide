@@ -135,13 +135,22 @@ export class TerminalManager {
 		return mergePromise(process, promise);
 	}
 
-	async getOrCreateTerminal(cwd: string): Promise<TerminalInfo> {
+	async getOrCreateTerminal(cwd: string, forceNew: boolean = false): Promise<TerminalInfo> {
+		// If forceNew is true, create a new terminal
+		if (forceNew) {
+			console.log('creating new terminal at', cwd);
+			const newTerminalInfo = TerminalRegistry.createTerminal(cwd);
+			vscode.aideAgentTerminals.showTerminal(newTerminalInfo.id.toString());
+			this.terminalIds.add(newTerminalInfo.id);
+			return newTerminalInfo;
+		}
+
 		// Find available terminal from our pool first (created for this task)
 		const availableTerminal = TerminalRegistry.getAllTerminals().find((t) => {
 			if (t.busy) {
 				return false;
 			}
-			const terminalCwd = t.terminal.shellIntegration?.cwd; // one of cline's commands could have changed the cwd of the terminal
+			const terminalCwd = t.terminal.shellIntegration?.cwd;
 			if (!terminalCwd) {
 				return false;
 			}
@@ -153,10 +162,8 @@ export class TerminalManager {
 		}
 
 		console.log('creating new terminal at', cwd);
-
 		const newTerminalInfo = TerminalRegistry.createTerminal(cwd);
 		vscode.aideAgentTerminals.showTerminal(newTerminalInfo.id.toString());
-		console.log('newTerminalInfo', newTerminalInfo);
 		this.terminalIds.add(newTerminalInfo.id);
 		return newTerminalInfo;
 	}
@@ -201,7 +208,8 @@ export async function executeTerminalCommand(
 	const terminalManager = new TerminalManager();
 
 	try {
-		const terminalInfo = await terminalManager.getOrCreateTerminal(cwd);
+		// For long-running commands (wait_for_exit = false), force a new terminal
+		const terminalInfo = await terminalManager.getOrCreateTerminal(cwd, !wait_for_exit);
 
 		const process = terminalManager.runCommand(terminalInfo, command);
 
@@ -211,7 +219,7 @@ export async function executeTerminalCommand(
 		});
 
 		if (!wait_for_exit) {
-			// Return immediately for long-running processes
+			// For long-running commands, don't dispose the terminal
 			return buffer;
 		}
 
