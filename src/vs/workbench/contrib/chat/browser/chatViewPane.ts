@@ -173,7 +173,7 @@ export class ChatViewPane extends ViewPane implements IViewWelcomeDelegate {
 				this.chatOptions.location,
 				{ viewId: this.id },
 				{
-					autoScroll: this.chatOptions.location === ChatAgentLocation.EditingSession,
+					autoScroll: this.configurationService.getValue<boolean>('chat.autoScroll.enabled') ?? (this.chatOptions.location === ChatAgentLocation.EditingSession),
 					renderFollowups: this.chatOptions.location === ChatAgentLocation.Panel,
 					supportsFileReferences: true,
 					supportsAdditionalParticipants: this.chatOptions.location === ChatAgentLocation.Panel,

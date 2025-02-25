@@ -1588,3 +1588,20 @@ have to be updated for changes to the rules above, or to support more deeply nes
 		}
 	}
 }
+
+.chat-auto-scroll-container {
+    position: absolute;
+    bottom: 50px;
+    right: 20px;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    background-color: var(--vscode-chat-list-background);
+    border-radius: 4px;
+    padding: 4px;
+}
+
+.chat-auto-scroll-checkbox {
+    margin: 0;
+    cursor: pointer;
+}

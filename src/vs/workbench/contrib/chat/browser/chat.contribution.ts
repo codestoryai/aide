@@ -151,6 +151,11 @@ configurationRegistry.registerConfiguration({
 			description: nls.localize('chat.detectParticipant.enabled', "Enables chat participant autodetection for panel chat."),
 			default: true
 		},
+		'chat.autoScroll.enabled': {
+			type: 'boolean',
+			description: nls.localize('chat.autoScroll.enabled', "Controls whether the chat view automatically scrolls to the end when new content is added. When disabled, you can use page-up/down and home/end keys to navigate as usual."),
+			default: true
+		},
 	}
 });
 Registry.as<IEditorPaneRegistry>(EditorExtensions.EditorPane).registerEditorPane(
