@@ -30,6 +30,7 @@ There are many ways in which you can participate in this project, for example:
 
 * [Submit bugs and feature requests](https://github.com/codestoryai/aide/issues), and help us verify as they are checked in
 * Review [source code changes](https://github.com/codestoryai/aide/pulls)
+* Learn about our [automated agents](docs/AGENTS.md) and how to interact with them
 
 If you are interested in fixing issues and contributing directly to the code base,
 please see the document **[How to Contribute](https://github.com/codestoryai/aide/blob/cs-main/HOW_TO_CONTRIBUTE.md)**, which covers the following:
