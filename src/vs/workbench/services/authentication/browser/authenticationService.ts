@@ -103,6 +103,24 @@ export class AuthenticationService extends Disposable implements IAuthentication
 	) {
 		super();
 
+		this.firstLoginCompleted = this._storageService.getBoolean(AuthenticationService.FIRST_LOGIN_STORAGE_KEY, StorageScope.APPLICATION, false);
+
+		this._register(this.onDidChangeSessions(e => {
+			if (e.event.added.length > 0 && !this.firstLoginCompleted) {
+				this._logService.info('[auth] First login detected, refreshing window');
+				try {
+					this.firstLoginCompleted = true;
+					this._storageService.store(AuthenticationService.FIRST_LOGIN_STORAGE_KEY, true, StorageScope.APPLICATION, StorageTarget.MACHINE);
+					// Use timeout to ensure window is fully loaded before refresh
+					setTimeout(() => {
+						mainWindow.location.reload();
+					}, 1000);
+				} catch (error) {
+					this._logService.error('[auth] Failed to handle first login:', error);
+				}
+			}
+		}));
+
 		this._register(authenticationAccessService.onDidChangeExtensionSessionAccess(e => {
 			// The access has changed, not the actual session itself but extensions depend on this event firing
 			// when they have gained access to an account so this fires that event.

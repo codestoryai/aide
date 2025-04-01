@@ -22,6 +22,7 @@ export class BrowserLifecycleService extends AbstractLifecycleService {
 	private ignoreBeforeUnload = false;
 
 	private didUnload = false;
+	private isFirstLogin = true;
 
 	constructor(
 		@ILogService logService: ILogService,
@@ -30,6 +31,18 @@ export class BrowserLifecycleService extends AbstractLifecycleService {
 		super(logService, storageService);
 
 		this.registerListeners();
+		this.handleFirstLogin();
+	}
+
+	private handleFirstLogin(): void {
+		if (this.isFirstLogin) {
+			this.logService.info('[lifecycle] First login detected, refreshing window');
+			// Use timeout to ensure window is fully loaded before refresh
+			setTimeout(() => {
+				mainWindow.location.reload();
+			}, 1000);
+			this.isFirstLogin = false;
+		}
 	}
 
 	private registerListeners(): void {
