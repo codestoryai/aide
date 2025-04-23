@@ -500,6 +500,40 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 	);
 	context.subscriptions.push(addVitePluginCommand);
+
+	// Register generate commit message command
+	const generateCommitMessageCommand = vscode.commands.registerCommand(
+		'codestory.generateCommitMessage',
+		async () => {
+			try {
+				const rootPath = vscode.workspace.rootPath;
+				if (!rootPath) {
+					vscode.window.showErrorMessage('No workspace folder found');
+					return;
+				}
+
+				// Get commit message
+				const commitMessage = await generateCommitMessage(rootPath);
+				
+				// Show the commit message in a quick pick to allow editing
+				const result = await vscode.window.showInputBox({
+					value: commitMessage,
+					prompt: 'Edit commit message if needed',
+					placeHolder: 'Commit message'
+				});
+
+				if (result) {
+					// Execute git commit command with the message
+					const terminal = vscode.window.createTerminal('Git Commit');
+					terminal.sendText(`git commit -m "${result.replace(/"/g, '\\"')}"`);
+					terminal.show();
+				}
+			} catch (error) {
+				vscode.window.showErrorMessage('Failed to generate commit message');
+			}
+		}
+	);
+	context.subscriptions.push(generateCommitMessageCommand);
 }
 
 export async function deactivate() {

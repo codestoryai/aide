@@ -79,6 +79,11 @@
       {
         "command": "codestory.install-vite-plugin",
         "title": "Add Vite plugin"
+      },
+      {
+        "command": "codestory.generateCommitMessage",
+        "title": "Generate Commit Message",
+        "category": "Aide"
       }
     ],
     "menus": {
