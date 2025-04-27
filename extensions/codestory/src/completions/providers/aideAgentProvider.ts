@@ -83,11 +83,12 @@ class AideResponseStreamCollection {
 }
 
 class SidecarConnectionFailedError extends Error {
-	constructor(message = '', ...args: any[]) {
-		const errorMessage = message || 'Connection error with sidecar. We\'d appreciate it if you could report this session using the feedback tool above - this is on us';
-		super(errorMessage, ...args);
-	}
+    constructor(message = '', ...args: any[]) {
+        const errorMessage = message || 'Connection error with sidecar. [Report issue](command:workbench.action.openIssueReporter)';
+        super(errorMessage, ...args);
+    }
 }
+
 
 
 export class AideAgentSessionProvider implements vscode.AideSessionParticipant {
@@ -582,7 +583,7 @@ export class AideAgentSessionProvider implements vscode.AideSessionParticipant {
 							});
 						} else {
 							stream.stream.toolTypeError({
-								message: `${event.event.Error.message}.\n\nWe\'d appreciate it if you could report this session using the feedback tool above - this is on us. Please try again.`
+								message: `${event.event.Error.message}. [Report issue](command:workbench.action.openIssueReporter)`
 							});
 						}
 						stream.stream.stage({ message: 'Error' });
