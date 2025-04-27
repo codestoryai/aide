@@ -181,6 +181,9 @@ export class UpdateContribution extends Disposable implements IWorkbenchContribu
 		this.updateStateContextKey = CONTEXT_UPDATE_STATE.bindTo(this.contextKeyService);
 		this.majorMinorUpdateAvailableContextKey = MAJOR_MINOR_UPDATE_AVAILABLE.bindTo(this.contextKeyService);
 
+		// Initialize the update status bar entry
+		this.updateStatusBarEntry = this._register(instantiationService.createInstance(UpdateStatusBarEntry));
+
 		this._register(updateService.onStateChange(this.onUpdateStateChange, this));
 		this.onUpdateStateChange(this.updateService.state);
 
