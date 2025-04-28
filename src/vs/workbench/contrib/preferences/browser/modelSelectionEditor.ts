@@ -502,7 +502,7 @@ class ModelActionsColumnRenderer implements ITableRenderer<IModelItemEntry, IMod
 
 	private createEditAction(modelSelectionItemEntry: IModelItemEntry): IAction {
 		return {
-			class: ThemeIcon.asClassName(settingsEditIcon),
+			class: `icon ${ThemeIcon.asClassName(settingsEditIcon)}`,
 			enabled: true,
 			id: 'editModelSelection',
 			label: localize('editModel', "Edit Model"),
@@ -708,7 +708,7 @@ class ProviderActionsColumnRenderer implements ITableRenderer<IProviderItemEntry
 
 	private createEditAction(providerSelectionItemEntry: IProviderItemEntry): IAction {
 		return {
-			class: ThemeIcon.asClassName(settingsEditIcon),
+			class: `icon ${ThemeIcon.asClassName(settingsEditIcon)}`,
 			enabled: true,
 			id: 'editProviderSelection',
 			label: localize('editProvider', "Edit Provider"),
@@ -814,11 +814,15 @@ class ProviderConfigColumnRenderer implements ITableRenderer<IProviderItemEntry,
 	disposeTemplate(templateData: IProviderConfigColumnTemplateData): void { }
 
 	private getEmptyConfigurationMessage(providerType: ProviderType): { message: string; complete: boolean } {
-		if (providerType === 'azure-openai' || providerType === 'openai-default' || providerType === 'togetherai' || providerType === 'openai-compatible' || providerType === 'anthropic' || providerType === 'fireworkai' || providerType === 'geminipro' || providerType === 'open-router') {
+		if (providerType === 'azure-openai' || providerType === 'openai-default' || providerType === 'togetherai' || 
+			providerType === 'openai-compatible' || providerType === 'anthropic' || providerType === 'fireworkai' || 
+			providerType === 'geminipro' || providerType === 'open-router') {
 			return { message: 'Configuration incomplete', complete: false };
-		} else if (providerType === 'ollama') {
+		} 
+		else if (providerType === 'ollama') {
 			return { message: 'No configuration required', complete: true };
-		} else if (providerType === 'codestory') {
+		} 
+		else if (providerType === 'codestory') {
 			return { message: 'Pre-packaged with Aide', complete: true };
 		}
 		return { message: 'No configuration options', complete: true };

@@ -186,7 +186,7 @@ export class ModelSelectionIndicator extends Disposable implements IWorkbenchCon
 						tooltip,
 						iconClasses: ['model-selection-picker', modelSelectionSettings[type] === modelKey ? 'selected-model-icon' : 'model-icon'],
 						buttons: [{
-							iconClass: ThemeIcon.asClassName(Codicon.edit),
+							iconClass: `icon ${ThemeIcon.asClassName(Codicon.edit)}`,
 							tooltip: nls.localize('modelSelection.edit', "Edit"),
 						}]
 					} as IQuickPickItem;

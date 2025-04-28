@@ -530,7 +530,7 @@ export class EditPreferenceWidget<T> extends Disposable {
 		newDecoration.push({
 			options: {
 				description: 'edit-preference-widget-decoration',
-				glyphMarginClassName: ThemeIcon.asClassName(settingsEditIcon),
+				glyphMarginClassName: `icon ${ThemeIcon.asClassName(settingsEditIcon)}`,
 				glyphMarginHoverMessage: new MarkdownString().appendText(hoverMessage),
 				stickiness: TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
 			},

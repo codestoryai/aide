@@ -490,14 +490,14 @@ export class ListSettingWidget<TListDataItem extends IListDataItem> extends Abst
 		}
 		return [
 			{
-				class: ThemeIcon.asClassName(settingsEditIcon),
+				class: `icon ${ThemeIcon.asClassName(settingsEditIcon)}`,
 				enabled: true,
 				id: 'workbench.action.editListItem',
 				tooltip: this.getLocalizedStrings().editActionTooltip,
 				run: () => this.editSetting(idx)
 			},
 			{
-				class: ThemeIcon.asClassName(settingsRemoveIcon),
+				class: `icon ${ThemeIcon.asClassName(settingsRemoveIcon)}`,
 				enabled: true,
 				id: 'workbench.action.removeListItem',
 				tooltip: this.getLocalizedStrings().deleteActionTooltip,
@@ -992,7 +992,7 @@ export class ObjectSettingDropdownWidget extends AbstractListSettingWidget<IObje
 
 		if (item.resetable) {
 			actions.push({
-				class: ThemeIcon.asClassName(settingsDiscardIcon),
+				class: `icon ${ThemeIcon.asClassName(settingsDiscardIcon)}`,
 				enabled: true,
 				id: 'workbench.action.resetListItem',
 				label: '',
