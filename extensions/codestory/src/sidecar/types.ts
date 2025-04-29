@@ -308,7 +308,8 @@ export type InLineAgentLLMType =
 	| 'DeepSeekCoder1_3BInstruct'
 	| 'CodeLlama13BInstruct'
 	| 'CodeLLama70BInstruct'
-	| 'CodeLlama7BInstruct';
+	| 'CodeLlama7BInstruct'
+	| 'o3';
 
 export interface InLineAgentDocumentSymbol {
 	name: string | null;
@@ -510,7 +511,8 @@ export enum LLMType {
 	PPLXSonnetSmall,
 	CohereRerankV3,
 	GoogleAIStudio,
-	GoogleAIStudioFlash
+	GoogleAIStudioFlash,
+	o3
 }
 
 export enum LLMProvider {
