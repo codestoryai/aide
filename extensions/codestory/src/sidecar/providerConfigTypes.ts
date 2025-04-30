@@ -60,4 +60,5 @@ export interface LLMProviderAPIKeys {
 	FireworksAI?: FireworkAIProviderConfig;
 	GeminiPro?: GeminiProProviderConfig;
 	OpenRouter?: OpenRouterProviderConfig;
+	VertexAI?: VertexAIProviderConfig;
 }

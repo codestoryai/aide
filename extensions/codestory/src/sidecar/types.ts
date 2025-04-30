@@ -523,6 +523,7 @@ export enum LLMProvider {
 	FireworksAI,
 	GoogleAIStudio,
 	OpenRouter,
+	VertexAI,
 }
 
 export type CustomLLMType = {
@@ -689,6 +690,15 @@ function getProviderConfiguration(type: string, value: ModelProviderConfiguratio
 			}
 		};
 	}
+	if (type === 'vertex-ai') {
+		return {
+			'VertexAI': {
+				'api_key': value.apiKey,
+				'project_id': value.projectId,
+				'location': value.location,
+			}
+		};
+	}
 	return null;
 }
 
@@ -730,6 +740,9 @@ function getModelProviderConfiguration(providerConfiguration: ProviderSpecificCo
 	}
 	if (providerConfiguration.type === 'open-router') {
 		return 'OpenRouter';
+	}
+	if (providerConfiguration.type === 'vertex-ai') {
+		return 'VertexAI';
 	}
 	return null;
 }
