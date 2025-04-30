@@ -277,6 +277,54 @@ suite('ChatService', () => {
 		await assertSnapshot(toSnapshotExportData(chatModel2));
 	});
 
+	test('does not show welcome message for restored sessions', async () => {
+		let serializedChatData: ISerializableChatData;
+		const testAgent: IChatAgent = {
+			...chatAgentWithMarkdown,
+			async provideWelcomeMessage(token) {
+				return { content: new MarkdownString('welcome message') };
+			}
+		};
+		testDisposables.add(chatAgentService.registerAgentImplementation(chatAgentWithMarkdownId, testAgent));
+
+		// Create first session and serialize it
+		{
+			const testService = testDisposables.add(instantiationService.createInstance(ChatService));
+			const chatModel1 = testDisposables.add(testService.startSession(ChatAgentLocation.Panel, CancellationToken.None));
+			await chatModel1.waitForInitialization();
+			
+			// Add a request so it's not considered a new session
+			await testService.sendRequest(chatModel1.sessionId, 'test request');
+			serializedChatData = JSON.parse(JSON.stringify(chatModel1));
+		}
+
+		// Restore the session and verify no welcome message
+		const testService2 = testDisposables.add(instantiationService.createInstance(ChatService));
+		const chatModel2 = testService2.loadSessionFromContent(serializedChatData);
+		assert(chatModel2);
+		await chatModel2.waitForInitialization();
+		
+		assert.strictEqual(chatModel2.welcomeMessage, undefined);
+	});
+
+	test('shows welcome message for new sessions', async () => {
+		const testAgent: IChatAgent = {
+			...chatAgentWithMarkdown,
+			async provideWelcomeMessage(token) {
+				return { content: new MarkdownString('welcome message') };
+			}
+		};
+		testDisposables.add(chatAgentService.registerAgentImplementation(chatAgentWithMarkdownId, testAgent));
+
+		const testService = testDisposables.add(instantiationService.createInstance(ChatService));
+		const chatModel = testDisposables.add(testService.startSession(ChatAgentLocation.Panel, CancellationToken.None));
+		await chatModel.waitForInitialization();
+		
+		assert.ok(chatModel.welcomeMessage);
+		assert.strictEqual(chatModel.welcomeMessage?.content.value, 'welcome message');
+	});
+
+
 	test('can deserialize with response', async () => {
 		let serializedChatData: ISerializableChatData;
 		testDisposables.add(chatAgentService.registerAgentImplementation(chatAgentWithMarkdownId, chatAgentWithMarkdown));

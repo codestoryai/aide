@@ -927,13 +927,12 @@ export class AideAgentSessionProvider implements vscode.AideSessionParticipant {
 		}
 	}
 
-	private async createNewResponseStream(sessionId: string) {
+	private async createNewResponseStream(sessionId: string): Promise<vscode.AideAgentEventSenderResponse | undefined> {
 		let responseStream: vscode.AideAgentEventSenderResponse | undefined;
 		const { exchange_id: exchangeId } = await this.newExchangeIdForSession(sessionId);
 		if (exchangeId) {
 			responseStream = this.responseStreamCollection.getResponseStream({ sessionId, exchangeId });
 		}
-
 		return responseStream;
 	}
 

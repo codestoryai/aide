@@ -411,8 +411,14 @@ export class ChatService extends Disposable implements IChatService {
 				throw new ErrorNoTelemetry('No default agent registered');
 			}
 
-			const welcomeMessage = await defaultAgent.provideWelcomeMessage?.(token) ?? undefined;
-			const sampleQuestions = await defaultAgent.provideSampleQuestions?.(model.initialLocation, token) ?? undefined;
+			// Only get welcome message and sample questions for new sessions
+			let welcomeMessage: IChatWelcomeMessageContent | undefined;
+			let sampleQuestions: IChatFollowup[] | undefined;
+			if (!model.getRequests().length) {
+				welcomeMessage = await defaultAgent.provideWelcomeMessage?.(token) ?? undefined;
+				sampleQuestions = await defaultAgent.provideSampleQuestions?.(model.initialLocation, token) ?? undefined;
+			}
+
 			model.initialize(welcomeMessage, sampleQuestions);
 		} catch (err) {
 			this.trace('startSession', `initializeSession failed: ${err}`);
