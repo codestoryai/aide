@@ -821,6 +821,15 @@ export class ChatInputPart extends Disposable implements IHistoryNavigationWidge
 		element.appendChild(textSpan);
 		element.appendChild(iconSpan);
 
+		// Make the status message more prominent when there's an error
+		if (runningStatus !== SidecarRunningStatus.Connected) {
+			element.classList.add('error-status');
+			textSpan.style.fontWeight = 'bold';
+		} else {
+			element.classList.remove('error-status');
+			textSpan.style.fontWeight = 'normal';
+		}
+
 		this._register(this.sidecarService.onDidChangeStatus(({ version, runningStatus, downloadStatus }) => {
 			const { text, color, updateAvailable, hover } = this.getSidecarStatus(runningStatus, downloadStatus, version);
 			textSpan.textContent = text;
@@ -832,8 +841,22 @@ export class ChatInputPart extends Disposable implements IHistoryNavigationWidge
 
 			if (runningStatus !== SidecarRunningStatus.Connected) {
 				this.inputEditor.updateOptions({ readOnly: true });
+				element.classList.add('error-status');
+				textSpan.style.fontWeight = 'bold';
 			} else {
 				this.inputEditor.updateOptions({ readOnly: false });
+				element.classList.remove('error-status');
+				textSpan.style.fontWeight = 'normal';
+			}
+		}));
+
+		// Add a focus event listener to show a notification when the sidecar is not connected
+		this._register(this.inputEditor.onDidFocusEditorText(() => {
+			if (this.sidecarService.runningStatus !== SidecarRunningStatus.Connected) {
+				this.notificationService.info(
+					localize('chat.sidecarNotConnected', 
+					"The sidecar is not connected. Please wait for it to connect or click on the status indicator to restart it.")
+				);
 			}
 		}));
 	}
