@@ -46,6 +46,10 @@ async function isWSLEnvironment(): Promise<boolean> {
 let wslTunnel: vscode.Tunnel | undefined;
 let isRestarting: boolean = false;
 
+// Add counter for consecutive recovery failures
+let consecutiveRecoveryFailures = 0;
+const MAX_CONSECUTIVE_FAILURES = 3;
+
 async function getHealthCheckURL(): Promise<string> {
 	if (await isWSLEnvironment() && wslTunnel) {
 		const localAddress = typeof wslTunnel.localAddress === 'string'
@@ -395,19 +399,33 @@ export async function setupSidecar(extensionBasePath: string): Promise<vscode.Di
 
 		const isHealthy = await healthCheck();
 		if (isHealthy) {
+			// Reset consecutive failures counter on success
+			consecutiveRecoveryFailures = 0;
 			versionCheck();
 		} else {
 			console.log('Health check failed, attempting recovery...');
 			// Set to Connecting first to indicate we're trying to reconnect
 			vscode.sidecar.setRunningStatus(vscode.SidecarRunningStatus.Connecting);
 
+			// Check if we've hit the maximum consecutive failures
+			if (consecutiveRecoveryFailures >= MAX_CONSECUTIVE_FAILURES) {
+				console.error(`Maximum consecutive recovery failures (${MAX_CONSECUTIVE_FAILURES}) reached`);
+				vscode.sidecar.setRunningStatus(vscode.SidecarRunningStatus.Unavailable);
+				vscode.window.showErrorMessage('Failed to recover sidecar after multiple attempts. Please try restarting Aide.');
+				return;
+			}
+
+			// Increment the consecutive failures counter
+			consecutiveRecoveryFailures++;
+
 			// First try: Attempt to restart using existing binary
 			try {
-				console.log('Attempting to restart sidecar with existing binary...');
+				console.log(`Recovery attempt ${consecutiveRecoveryFailures}/${MAX_CONSECUTIVE_FAILURES}: Restarting with existing binary`);
 				await restartSidecarBinary(extensionBasePath);
 				const recoveryCheck = await retryHealthCheck(3, 1000);
 				if (recoveryCheck) {
 					console.log('Successfully recovered sidecar using existing binary');
+					consecutiveRecoveryFailures = 0;
 					return;
 				}
 			} catch (error) {
@@ -416,27 +434,38 @@ export async function setupSidecar(extensionBasePath: string): Promise<vscode.Di
 
 			// Second try: Binary might be missing, try fresh download and start
 			try {
-				console.log('Attempting fresh download and start...');
+				console.log(`Recovery attempt ${consecutiveRecoveryFailures}/${MAX_CONSECUTIVE_FAILURES}: Fresh download and start`);
 				// Kill any existing process first
 				await killSidecar();
 
 				// Fresh download and start
 				await fetchSidecarWithProgress(zipDestination);
+				await unzipSidecarArchive(zipDestination, extractedDestination, webserverPath);
 				await startSidecarBinary(webserverPath);
 
 				const freshStartCheck = await retryHealthCheck(3, 1000);
 				if (freshStartCheck) {
 					console.log('Successfully recovered sidecar with fresh download');
+					consecutiveRecoveryFailures = 0;
 					return;
 				}
 			} catch (error) {
 				console.error('Failed to recover sidecar after fresh download:', error);
 			}
 
-			// If we get here, all recovery attempts failed
-			console.error('All recovery attempts failed');
-			vscode.sidecar.setRunningStatus(vscode.SidecarRunningStatus.Unavailable);
-			vscode.window.showErrorMessage('Failed to recover sidecar after multiple attempts. Please try restarting Aide.');
+			// Check binary permissions and existence as diagnostic
+			try {
+				const binaryExists = fs.existsSync(webserverPath);
+				const binaryStats = binaryExists ? fs.statSync(webserverPath) : null;
+				console.error('Sidecar recovery diagnostic:', {
+					binaryExists,
+					binaryPermissions: binaryStats ? binaryStats.mode : null,
+					port: getSidecarPort(),
+					consecutiveFailures: consecutiveRecoveryFailures
+				});
+			} catch (error) {
+				console.error('Error checking binary status:', error);
+			}
 		}
 	}, 5000);
 
