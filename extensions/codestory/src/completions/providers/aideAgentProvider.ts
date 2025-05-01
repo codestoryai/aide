@@ -517,7 +517,7 @@ export class AideAgentSessionProvider implements vscode.AideSessionParticipant {
 	 * interested in, so we want to close the stream when we want to
 	 */
 	async reportAgentEventsToChat(
-		sessionId: string,
+		incomingSessionId: string,
 		stream: AsyncIterableIterator<SideCarAgentEvent>,
 		authCallbacks?: { hasRetried: boolean; onUnauthorized: () => void },
 		errorCallback?: () => void,
@@ -527,7 +527,10 @@ export class AideAgentSessionProvider implements vscode.AideSessionParticipant {
 		};
 
 		try {
+			// Track if the stream has started processing events
 			let streamStarted = false;
+			// Flag to identify if we're handling a restored session from a previous connection
+			let isRestoredSession = false;
 
 			for await (const event of asyncIterable) {
 				// print debug events if we are in dev mode
@@ -535,19 +538,30 @@ export class AideAgentSessionProvider implements vscode.AideSessionParticipant {
 					printEventDebug(event);
 				}
 
+				// Skip keep-alive events as they don't contain meaningful data
 				if ('keep_alive' in event) {
 					continue;
 				}
 
+				// Handle session start/restore events
 				if ('session_id' in event && 'started' in event) {
 					if (!event.started) {
 						streamStarted = false;
 						throw new SidecarConnectionFailedError();
 					}
-
+					// Detect restored sessions by checking if the session ID matches but hasn't started
+					// This happens when reconnecting to an existing session
+					isRestoredSession = event.session_id === incomingSessionId;
 					continue;
 				}
 
+				// For restored sessions, skip initial event exchange until we're properly synchronized
+				// This prevents duplicate processing of events from the previous connection
+				if (isRestoredSession && !streamStarted) {
+					continue;
+				}
+
+				// Skip completion events as they're handled elsewhere
 				if ('done' in event) {
 					continue;
 				}
@@ -908,7 +922,7 @@ export class AideAgentSessionProvider implements vscode.AideSessionParticipant {
 				throw new SidecarConnectionFailedError();
 			}
 		} catch (error) {
-			const responseStream = this.responseStreamCollection.latestResponseStream ?? await this.createNewResponseStream(sessionId);
+			const responseStream = this.responseStreamCollection.latestResponseStream ?? await this.createNewResponseStream(incomingSessionId);
 			if (!responseStream) {
 				throw error;
 			}
@@ -922,7 +936,7 @@ export class AideAgentSessionProvider implements vscode.AideSessionParticipant {
 			// Clean up any open streams
 			const openStreams = this.responseStreamCollection.getAllResponseStreams();
 			for (const stream of openStreams) {
-				this.closeAndRemoveResponseStream(sessionId, stream.exchangeId);
+				this.closeAndRemoveResponseStream(incomingSessionId, stream.exchangeId);
 			}
 		}
 	}

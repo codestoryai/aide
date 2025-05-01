@@ -1,0 +1,10 @@
+{
+  "require": ["source-map-support/register"],
+  "ui": "tdd",
+  "timeout": 5000,
+  "color": true,
+  "recursive": true,
+  "extension": ["ts"],
+  "watch-files": ["src/**/*.ts"],
+  "reporter": "spec"
+}
