@@ -70,6 +70,7 @@ export class SideCarClient {
 	private _url: string;
 	private _modelConfiguration: vscode.ModelSelection;
 	private _userId: string | null;
+	private _sessionProvider: AideAgentSessionProvider;
 
 	constructor(
 		modelConfiguration: vscode.ModelSelection,
@@ -77,6 +78,7 @@ export class SideCarClient {
 		this._url = sidecarURL();
 		this._modelConfiguration = modelConfiguration;
 		this._userId = getUserId();
+		this._sessionProvider = new AideAgentSessionProvider();
 	}
 
 	async validateModelConfiguration(config: Awaited<ReturnType<typeof getSideCarModelConfiguration>>): Promise<vscode.ModelConfigValidationResponse> {
@@ -493,6 +495,10 @@ export class SideCarClient {
 		}
 
 		const user_context = await convertVSCodeVariableToSidecarHackingForPlan(variables, query);
+
+		// Simulate token count update
+		const simulatedTokenCount = Math.floor(query.length / 4); // Simple simulation based on query length
+		this._sessionProvider.updateInputTokens(simulatedTokenCount);
 
 		const body = {
 			repo_ref: repoRef.getRepresentation(),

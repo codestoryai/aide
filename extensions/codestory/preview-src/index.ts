@@ -3,6 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 import { onceDocumentLoaded } from './events';
+import AideAgentSessionProvider from "../../completions/providers/AideAgentSessionProvider";
 
 const vscode = acquireVsCodeApi();
 
@@ -38,6 +39,10 @@ const clearOverlaysButton = header.querySelector<HTMLButtonElement>('.clear-over
 const openExternalButton = header.querySelector<HTMLButtonElement>('.open-external-button')!;
 
 window.addEventListener('message', (e) => {
+	if (e.data && e.data.type === 'simulateTokenUpdate' && e.data.tokens != null) {
+		AideAgentSessionProvider.updateInputTokens(e.data.tokens);
+	}
+	
 	switch (e.data.type) {
 		case 'focus': {
 			browserIframe.focus();
@@ -65,6 +70,18 @@ function getInputValue(url: URL) {
 }
 
 onceDocumentLoaded(() => {
+	// Create a div to display the token count
+	const tokensDiv = document.createElement('div');
+	tokensDiv.id = "inputTokensDisplay";
+	tokensDiv.style.cssText = "position: absolute; top: 10px; right: 10px; padding: 5px; background: #f0f0f0; border: 1px solid #ccc;";
+	tokensDiv.innerText = "Input Tokens: 0";
+	document.body.appendChild(tokensDiv);
+
+	// Listen for the custom event to update token count
+	window.addEventListener('aideInputTokensUpdate', (e: any) => {
+		tokensDiv.innerText = "Input Tokens: " + (e.detail.tokens || 0);
+	});
+
 	setInterval(() => {
 		const iframeFocused = document.activeElement?.tagName === 'IFRAME';
 		document.body.classList.toggle('iframe-focused', iframeFocused);
