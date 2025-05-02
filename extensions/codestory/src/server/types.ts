@@ -383,6 +383,9 @@ interface UIEvent {
 	ExchangeEvent: ExchangeMessageEvent;
 	PlanEvent: PlanMessageEvent;
 	Error: ErrorEvent;
+	ContextWindowWarning?: {
+		message: string;
+	};
 }
 
 interface ErrorEvent {

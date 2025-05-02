@@ -552,6 +552,16 @@ export class AideAgentSessionProvider implements vscode.AideSessionParticipant {
 					continue;
 				}
 
+				if (event.event.ContextWindowWarning) {
+					const stream = latestResponseStream ?? await this.createNewResponseStream(event.request_id);
+					if (stream) {
+						stream.stream.toolTypeError({
+							message: event.event.ContextWindowWarning.message
+						});
+					}
+					continue;
+				}
+
 				if (event.event.Error) {
 					if (event.event.Error.message.toLowerCase().endsWith('cancelled by user')) {
 						// Sidecar sends this event when the user explicitly cancels any task and we invoke sidecar's
