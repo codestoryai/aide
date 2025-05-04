@@ -89,7 +89,7 @@ export interface IChatWidgetLocationOptions {
 	resolveData?(): IChatLocationData | undefined;
 }
 
-export type IChatWidgetCompletionContext = 'default' | 'files' | 'code';
+export type IChatWidgetCompletionContext = 'default' | 'files' | 'code' | 'folders';
 
 export class ChatWidget extends Disposable implements IChatWidget {
 	public static readonly CONTRIBS: { new(...args: [IChatWidget, ...any]): IChatWidgetContrib }[] = [];

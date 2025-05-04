@@ -47,7 +47,7 @@ import { ChatDynamicVariableModel } from './aideAgentDynamicVariables.js';
 const builtinStaticCompletions = 'builtinStaticCompletions';
 const builtinFileProvider = 'builtinFileProvider';
 const builtinCodeProvider = 'builtinCodeProvider';
-type builtinSecondaryProvider = 'builtinFileProvider' | 'builtinCodeProvider';
+type builtinSecondaryProvider = 'builtinFileProvider' | 'builtinCodeProvider' | 'builtinFolderProvider';
 
 class SlashCommandCompletions extends Disposable {
 	constructor(
@@ -357,6 +357,7 @@ export class BuiltinStaticCompletions extends Disposable {
 				const result: CompletionList = { suggestions: [] };
 				this.addStaticFileEntry(widget, range, result);
 				this.addStaticCodeEntry(widget, range, result);
+				this.addStaticFolderEntry(widget, range, result);
 				return result;
 			}
 		}));
@@ -387,6 +388,19 @@ export class BuiltinStaticCompletions extends Disposable {
 			kind: CompletionItemKind.Reference,
 			sortText: 'z',
 			command: { id: TriggerSecondaryChatWidgetCompletionAction.ID, title: TriggerSecondaryChatWidgetCompletionAction.ID, arguments: [{ widget, pick: 'code' } satisfies TriggerSecondaryChatWidgetCompletionContext] }
+		});
+	}
+
+	private addStaticFolderEntry(widget: IChatWidget, range: { insert: Range; replace: Range; varWord: IWordAtPosition | null }, result: CompletionList) {
+		result.suggestions.push({
+			label: 'Folder',
+			filterText: `${chatVariableLeader}folder`,
+			insertText: `${chatVariableLeader}`,
+			detail: localize('pickFolderLabel', "Pick a folder"),
+			range,
+			kind: CompletionItemKind.Folder,
+			sortText: 'z',
+			command: { id: TriggerSecondaryChatWidgetCompletionAction.ID, title: TriggerSecondaryChatWidgetCompletionAction.ID, arguments: [{ widget, pick: 'folders' } satisfies TriggerSecondaryChatWidgetCompletionContext] }
 		});
 	}
 
@@ -558,6 +572,210 @@ class BuiltInFileProvider extends Disposable {
 	}
 }
 Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench).registerWorkbenchContribution(BuiltInFileProvider, LifecyclePhase.Eventually);
+
+class BuiltInFolderProvider extends Disposable {
+	private readonly queryBuilder: QueryBuilder;
+	private cacheKey?: { key: string; time: number };
+	private readonly cacheScheduler: RunOnceScheduler;
+
+	private folderEntries: IFileMatch<URI>[] = [];
+	private lastPattern?: string;
+
+	constructor(
+		@IAideAgentWidgetService private readonly chatWidgetService: IAideAgentWidgetService,
+		@IHistoryService private readonly historyService: IHistoryService,
+		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		@ILabelService private readonly labelService: ILabelService,
+		@ILanguageFeaturesService private readonly languageFeaturesService: ILanguageFeaturesService,
+		@ISearchService private readonly searchService: ISearchService,
+		@IWorkspaceContextService private readonly workspaceContextService: IWorkspaceContextService,
+		@IFileService private readonly fileService: IFileService,
+	) {
+		super();
+
+		this.cacheScheduler = this._register(new RunOnceScheduler(() => {
+			this.cacheFolderEntries();
+		}, 0));
+		this.queryBuilder = this.instantiationService.createInstance(QueryBuilder);
+
+		this._register(this.languageFeaturesService.completionProvider.register({ scheme: ChatInputPart.INPUT_SCHEME, hasAccessToAllModels: true }, {
+			_debugDisplayName: builtinFolderProvider,
+			triggerCharacters: [chatVariableLeader],
+			provideCompletionItems: async (model: ITextModel, position: Position, context: CompletionContext, token: CancellationToken) => {
+				const widget = this.chatWidgetService.getWidgetByInputUri(model.uri);
+				if (!widget || !widget.supportsFileReferences) {
+					return null;
+				}
+
+				const range = computeCompletionRanges(model, position, BuiltinStaticCompletions.VariableNameDef, true);
+				if (!range) {
+					return null;
+				}
+
+				const result: CompletionList = { suggestions: [] };
+				let pattern: string = '';
+				if (range.varWord?.word && range.varWord.word.startsWith(chatVariableLeader)) {
+					pattern = range.varWord.word.toLowerCase().slice(1); // remove leading @
+				}
+
+				if (pattern.length === 0 && context.triggerKind === CompletionTriggerKind.TriggerCharacter) {
+					return;
+				}
+
+				await this.addFolderEntries(pattern, widget, result, range, token);
+
+				this.lastPattern = pattern;
+				result.incomplete = true;
+				this.cacheScheduler.schedule();
+
+				return result;
+			}
+		}));
+	}
+
+	private async addFolderEntries(pattern: string, widget: IChatWidget, result: CompletionList, info: { insert: Range; replace: Range; varWord: IWordAtPosition | null }, token: CancellationToken) {
+		const makeFolderCompletionItem = async (resource: URI): Promise<CompletionItem | undefined> => {
+			const basename = this.labelService.getUriBasenameLabel(resource);
+			const insertText = `${chatVariableLeader}${basename}`;
+			return {
+				label: { label: basename, description: this.labelService.getUriLabel(resource, { relative: true }) },
+				filterText: `${chatVariableLeader}${basename}`,
+				insertText,
+				range: info,
+				kind: CompletionItemKind.Folder,
+				sortText: '{', // after `z`
+				command: {
+					id: AddFolderCompletionEntryAction.ID,
+					title: '',
+					arguments: [{
+						widget,
+						resource,
+						replace: { startLineNumber: info.replace.startLineNumber, startColumn: info.replace.startColumn, endLineNumber: info.replace.endLineNumber, endColumn: info.replace.startColumn + insertText.length }
+					} satisfies AddFolderCompletionEntryContext]
+				}
+			};
+		};
+
+		const seen = new ResourceSet();
+		const len = result.suggestions.length;
+
+		// HISTORY
+		for (const item of this.historyService.getHistory()) {
+			if (!item.resource || !this.workspaceContextService.getWorkspaceFolder(item.resource)) {
+				continue;
+			}
+
+			// Only include folders
+			const stat = await this.fileService.resolve(item.resource);
+			if (!stat.isDirectory) {
+				continue;
+			}
+
+			if (pattern) {
+				const basename = this.labelService.getUriBasenameLabel(item.resource).toLowerCase();
+				if (!isPatternInWord(pattern, 0, pattern.length, basename, 0, basename.length)) {
+					continue;
+				}
+			}
+
+			seen.add(item.resource);
+			const completionItem = await makeFolderCompletionItem(item.resource);
+			if (completionItem) {
+				result.suggestions.push(completionItem);
+			}
+
+			if (result.suggestions.length - len >= 5) {
+				break;
+			}
+		}
+
+		// SEARCH
+		if (pattern) {
+			for (const match of this.folderEntries) {
+				if (seen.has(match.resource)) {
+					continue;
+				}
+
+				const completionItem = await makeFolderCompletionItem(match.resource);
+				if (!completionItem) {
+					continue;
+				}
+
+				result.suggestions.push(completionItem);
+			}
+		}
+	}
+
+	private async cacheFolderEntries() {
+		if (this.cacheKey && Date.now() - this.cacheKey.time > 60000) {
+			this.searchService.clearCache(this.cacheKey.key);
+			this.cacheKey = undefined;
+		}
+
+		if (!this.cacheKey) {
+			this.cacheKey = {
+				key: generateUuid(),
+				time: Date.now()
+			};
+		}
+
+		this.cacheKey.time = Date.now();
+
+		const query = this.queryBuilder.file(this.workspaceContextService.getWorkspace().folders, {
+			filePattern: this.lastPattern,
+			sortByScore: true,
+			cacheKey: this.cacheKey.key,
+			_reason: 'chatFolderCompletions',
+			includePattern: { glob: '**/', when: true }, // Only include folders
+		});
+
+		const data = await this.searchService.fileSearch(query, CancellationToken.None);
+		this.folderEntries = data.results;
+	}
+}
+Registry.as<IWorkbenchContributionsRegistry>(WorkbenchExtensions.Workbench).registerWorkbenchContribution(BuiltInFolderProvider, LifecyclePhase.Eventually);
+
+interface AddFolderCompletionEntryContext {
+	widget: IChatWidget;
+	resource: URI;
+	replace: IRange;
+}
+
+function isAddFolderCompletionEntryContext(context: any): context is AddFolderCompletionEntryContext {
+	return 'widget' in context && 'resource' in context && 'replace' in context;
+}
+
+class AddFolderCompletionEntryAction extends Action2 {
+	static readonly ID = 'workbench.action.aideAgent.addFolderCompletionEntry';
+
+	constructor() {
+		super({
+			id: AddFolderCompletionEntryAction.ID,
+			title: '' // not displayed
+		});
+	}
+
+	async run(accessor: ServicesAccessor, ...args: any[]) {
+		const commandService = accessor.get(ICommandService);
+
+		const context = args[0];
+		if (!isAddFolderCompletionEntryContext(context)) {
+			return;
+		}
+
+		const { widget, resource, replace } = context;
+
+		commandService.executeCommand(
+			BuiltinStaticCompletions.addReferenceCommand,
+			new ReferenceArgument(widget, {
+				id: 'vscode.folder',
+				range: replace,
+				data: { uri: context.resource }
+			})
+		);
+	}
+}
+registerAction2(AddFolderCompletionEntryAction);
 
 interface AddFileCompletionEntryContext {
 	widget: IChatWidget;
@@ -753,6 +971,8 @@ export class TriggerSecondaryChatWidgetCompletionAction extends Action2 {
 			debugDisplayName = 'builtinFileProvider';
 		} else if (pick === 'code') {
 			debugDisplayName = 'builtinCodeProvider';
+		} else if (pick === 'folders') {
+			debugDisplayName = 'builtinFolderProvider';
 		} else {
 			return;
 		}
